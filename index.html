@@ -22,7 +22,12 @@
 html,body{margin:0;height:100%}
 body{
   font-family:"Yuanti SC","PingFang SC",ui-rounded,-apple-system,BlinkMacSystemFont,"Hiragino Sans GB","Microsoft YaHei",sans-serif;
-  background:var(--bg); color:var(--ink); line-height:1.55;
+  background:
+    radial-gradient(120% 60% at 12% 0%, rgba(199,186,210,.20), transparent 55%),
+    radial-gradient(120% 60% at 92% 4%, rgba(174,191,201,.20), transparent 55%),
+    radial-gradient(140% 80% at 50% 100%, rgba(217,196,192,.18), transparent 60%),
+    linear-gradient(180deg,#F7F2EC 0%, #EFE9E2 45%, #EAE5DE 100%);
+  color:var(--ink); line-height:1.6;
   -webkit-font-smoothing:antialiased; overscroll-behavior:none;
 }
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
@@ -49,7 +54,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .keypad .del{font-size:17px}
 .shake{animation:shk .4s}@keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-9px)}75%{transform:translateX(9px)}}
 /* ===== 应用壳 ===== */
-#app{display:flex;flex-direction:column;height:100%;max-width:520px;margin:0 auto;background:var(--bg)}
+#app{display:flex;flex-direction:column;height:100%;max-width:520px;margin:0 auto;background:transparent}
 #view{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 18px}
 #subhdr{display:none;align-items:center;gap:10px;margin:-4px 0 12px}
 #subhdr .back{font-size:22px;width:34px;height:34px;border-radius:12px;background:var(--card);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center}
@@ -62,17 +67,19 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 #tabbar button.on{color:var(--accent);font-weight:600}
 #tabbar button.on .ic{transform:translateY(-1px)}
 /* ===== 卡片通用 ===== */
-.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;transition:transform .2s ease, box-shadow .2s ease}
+.card:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(120,110,98,.16)}
 .card h3{margin:0 0 10px;font-size:14px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:7px;letter-spacing:.5px}
 .card h3 .more{margin-left:auto;font-size:12px;color:var(--accent);font-weight:500}
-.hometop{display:flex;justify-content:space-between;align-items:flex-end;margin:8px 4px 16px}
-.hi{font-size:21px;font-weight:600;color:var(--ink)}
-.hi .nm{color:var(--accent)}
-.datebox{text-align:right;color:var(--ink2);font-size:12.5px;line-height:1.55}
-.datebox .dt{font-size:14px;color:var(--ink);letter-spacing:.5px}
-.datebox .wt{font-size:18px;color:var(--ink);font-weight:600;display:flex;align-items:center;gap:3px;justify-content:flex-end}
-.datebox .wt .ti{font-size:20px;margin-right:1px}
-.datebox .city{font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:3px;justify-content:flex-end;margin-top:2px}
+.hometop{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:6px 2px 18px;padding:16px 18px;
+  background:linear-gradient(135deg,rgba(252,250,246,.92),rgba(246,241,234,.78));border-radius:22px;box-shadow:var(--shadow)}
+.hi{font-size:22px;font-weight:600;color:var(--ink);letter-spacing:1px;line-height:1.4}
+.hi .nm{color:var(--accent);font-weight:700}
+.datebox{text-align:right;color:var(--ink2);font-size:12px;line-height:1.5;flex:none}
+.datebox .dt{font-size:13.5px;color:var(--ink);letter-spacing:.5px}
+.datebox .wt{font-size:19px;color:var(--ink);font-weight:600;display:flex;align-items:center;gap:3px;justify-content:flex-end}
+.datebox .wt .ti{font-size:21px;margin-right:1px}
+.datebox .city{font-size:11.5px;color:var(--ink2);display:flex;align-items:center;gap:3px;justify-content:flex-end;margin-top:3px}
 .hiadd{margin-left:auto;width:32px;height:32px;border-radius:50%;background:var(--card2);color:var(--accent);font-size:20px;display:flex;align-items:center;justify-content:center;flex:none}
 .hiadd:active{transform:scale(.9)}
 .newsmini{display:flex;justify-content:flex-end}
@@ -113,6 +120,17 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .gcard .gs{font-size:11px;color:var(--ink2)}
 .gcard .trend{height:30px;margin-top:2px}
 .photo-sm{width:46px;height:46px;border-radius:12px;object-fit:cover;background:var(--card2)}
+/* 支线看板 */
+.dashsum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.dashsum .sc{border-radius:16px;padding:12px 8px;text-align:center;box-shadow:0 3px 12px rgba(120,110,98,.07)}
+.dashsum .sc .sv{font-size:15px;font-weight:700;color:var(--ink);line-height:1.25}
+.dashsum .sc .sl{font-size:11px;color:var(--ink2);margin-top:4px;letter-spacing:.3px}
+.dashflow .fh{font-size:13px;font-weight:600;color:var(--ink2);letter-spacing:1px;margin:6px 2px 8px;display:flex;align-items:center;gap:6px}
+.dashflow .fh::before{content:"";width:3px;height:14px;border-radius:3px;background:var(--accent);opacity:.7}
+.dashflow .item{padding:10px 2px;border-bottom:1px solid var(--line)}
+.dashflow .item:last-child{border-bottom:none}
+.dashflow .item .t{font-size:13.5px;color:var(--ink)}
+.dashflow .item .s{font-size:11.5px;color:var(--ink2);margin-top:3px}
 /* 心情 */
 .moodrow{display:flex;gap:8px;align-items:flex-end}
 .moodrow textarea{flex:1;border:1px solid var(--line);border-radius:14px;padding:10px 12px;font:inherit;font-size:13.5px;background:var(--card2);color:var(--ink);resize:none;height:54px}
@@ -629,12 +647,69 @@ const MODULES=[
 ];
 function renderBranch(){curViewFn=null;const cards=MODULES.map(m=>{
   const cnt=DB[m.k]?DB[m.k].length:0;
-  const fn=m.k==='ledger'?'chooseCurrency()':(m.k==='diet'?'addDiet()':('openModule(\''+m.n+'\','+m.k+'View,bind'+cap(m.k)+'())'));
-  return '<div class="gcard" style="min-height:88px" onclick="'+fn+'"><div class="gi">'+m.i+'</div><div class="gt">'+m.n+'</div><div class="gs">'+cnt+' 条记录</div></div>';
+  return '<div class="gcard" style="min-height:88px" onclick="openModule(\''+m.n+'\',()=>branchDash(\''+m.k+'\'),null)"><div class="gi">'+m.i+'</div><div class="gt">'+m.n+'</div><div class="gs">'+cnt+' 条记录 · 看板</div></div>';
 }).join('');
-  $('#view').innerHTML='<div class="hi" style="margin:4px 2px 12px">🌿 支线</div><div class="grid">'+cards+'</div>'+
+  $('#view').innerHTML='<div class="hi" style="margin:4px 2px 12px">🌿 支线 · 数据看板</div><div class="grid">'+cards+'</div>'+
     card('📊 数据','',
       '<div style="display:flex;gap:10px"><button class="btn soft" style="flex:1" onclick="exportData()">导出备份</button><button class="btn soft" style="flex:1" onclick="importData()">导入备份</button></div>');
+}
+function sumCards(arr){return '<div class="dashsum">'+arr.map(s=>'<div class="sc" style="background:linear-gradient(135deg,'+s[2]+'30,'+s[2]+'14)"><div class="sv">'+s[1]+'</div><div class="sl">'+s[0]+'</div></div>').join('')+'</div>';}
+function flowList(html){return '<div class="dashflow"><div class="fh">流水</div>'+(html||'<div class="empty">暂无记录</div>')+'</div>';}
+function branchDash(k){const m=MODULES.find(x=>x.k===k);if(!m)return '';
+  const y=new Date().getFullYear(),mo=new Date().getMonth();const ym=y+'-'+String(mo+1).padStart(2,'0');
+  let sum='',flow='',addFn='openModule(\''+m.n+'\','+m.k+'View,bind'+cap(m.k)+'())';
+  if(k==='ledger'){const cur=DB.ledger.filter(l=>l.date&&l.date.slice(0,7)===ym);
+    const eH=cur.filter(l=>l.type==='支出'&&l.cur==='HKD').reduce((s,l)=>s+(+l.amount||0),0);
+    const iH=cur.filter(l=>l.type==='收入'&&l.cur==='HKD').reduce((s,l)=>s+(+l.amount||0),0);
+    const eC=cur.filter(l=>l.type==='支出'&&l.cur==='CNY').reduce((s,l)=>s+(+l.amount||0),0);
+    const iC=cur.filter(l=>l.type==='收入'&&l.cur==='CNY').reduce((s,l)=>s+(+l.amount||0),0);
+    sum=sumCards([['本月支出',(eH?('HK$'+Math.round(eH)):'')+(eC?(' · ¥'+Math.round(eC)):'—'),'#C9A8A4'],['本月收入',(iH?('HK$'+Math.round(iH)):'')+(iC?(' · ¥'+Math.round(iC)):'—'),'#B7C7B4'],['笔数',cur.length+' 笔','#C7BAD2']]);
+    const list=[...DB.ledger].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
+    flow=flowList(list.map(l=>'<div class="item" onclick="editLedger(\''+l.id+'\')"><div class="main"><div class="t">'+(l.type==='收入'?'+':'−')+(l.cur==='HKD'?'HK$':'¥')+Math.round(l.amount)+' · '+l.cat+(l.detail?(' · '+esc(l.detail)):'')+'</div><div class="s">'+(l.pay||'')+(l.owner?(' · '+l.owner):'')+' · '+fmtMD(l.date)+'</div></div></div>').join(''));
+    addFn='chooseCurrency()';}
+  else if(k==='diet'){const cur=DB.diet.filter(d=>d.date&&d.date.slice(0,7)===ym);
+    sum=sumCards([['本月餐数',cur.length+' 餐','#B7C7B4'],['记录天数',new Set(cur.map(d=>d.date)).size+' 天','#AEBFC9'],['累计',DB.diet.length+' 条','#C9A8A4']]);
+    const list=[...DB.diet].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
+    flow=flowList(list.map(d=>'<div class="item"><div class="main"><div class="t">'+esc(d.meal||'餐')+(d.desc?(' · '+esc(d.desc.slice(0,22))):'')+'</div><div class="s">'+fmtMD(d.date)+'</div></div></div>').join(''));
+    addFn='addDiet()';}
+  else if(k==='sleep'){const cur=DB.sleep.filter(s=>s.date&&s.date.slice(0,7)===ym&&s.dur);
+    const avg=cur.length?cur.reduce((s,x)=>s+(+x.dur||0),0)/cur.length:0;const ok=cur.filter(s=>(+s.dur||0)>=DB.sleepGoal).length;
+    sum=sumCards([['本月均睡',avg?avg.toFixed(1)+'h':'—','#AEBFC9'],['达标天数',ok+' 天','#B7C7B4'],['记录',cur.length+' 晚','#C7BAD2']]);
+    const list=[...DB.sleep].filter(s=>s.dur).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
+    flow=flowList(list.map(s=>'<div class="item"><div class="main"><div class="t">'+(+s.dur).toFixed(1)+' 小时'+(s.quality?(' · '+s.quality+'分'):'')+'</div><div class="s">'+(s.start||'')+'~'+(s.end||'')+' · '+fmtMD(s.date)+'</div></div></div>').join(''));
+    addFn='openModule(\'睡眠\',sleepView,bindSleep)';}
+  else if(k==='study'){const cur=DB.study.filter(s=>s.date&&s.date.slice(0,7)===ym&&s.dur);
+    const tot=cur.reduce((s,x)=>s+(+x.dur||0),0);
+    sum=sumCards([['本月学习',(Math.floor(tot/60))+'h'+(tot%60?(''+(tot%60)+'m'):''),'#C7BAD2'],['专注天数',cur.length+' 天','#B7C7B4'],['日均',cur.length?Math.round(tot/cur.length)+' 分':'—','#AEBFC9']]);
+    const list=[...DB.study].filter(s=>s.dur).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
+    flow=flowList(list.map(s=>'<div class="item"><div class="main"><div class="t">'+(+s.dur)+' 分'+(s.type?(' · '+esc(s.type)):'')+'</div><div class="s">'+fmtMD(s.date)+'</div></div></div>').join(''));
+    addFn='openModule(\'学习\',studyView,bindStudy)';}
+  else if(k==='period'){const cur=DB.period.filter(p=>p.date&&p.date.slice(0,7)===ym);const pd=predictPeriod();
+    sum=sumCards([['本月经期',cur.length+' 天','#D9C4C0'],['下次预测',pd?pd.next:'先标记','#C9A8A4'],['周期',(DB.periodCycle||28)+' 天','#C7BAD2']]);
+    const list=[...DB.period].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
+    flow=flowList(list.map(p=>'<div class="item"><div class="main"><div class="t">🌸 经期记录</div><div class="s">'+fmtMD(p.date)+'</div></div></div>').join(''));
+    addFn='openModule(\'经期\',periodView,bindPeriod)';}
+  else if(k==='countdown'){const list=DB.countdown.map(c=>({c,d:daysBetween(todayStr(),c.date)})).sort((a,b)=>a.d-b.d);const up=list.filter(x=>x.d>=-1).length;
+    sum=sumCards([['临近事件',up+' 个','#C9B0C2'],['总事件',list.length+' 个','#AEBFC9'],['最近',list.length?esc(list[0].c.name.slice(0,8)):'—','#C9A8A4']]);
+    flow=flowList(list.slice(0,15).map(x=>'<div class="item" onclick="editCountdown(\''+x.c.id+'\')"><div class="main"><div class="t">'+esc(x.c.name)+'</div><div class="s">'+(x.c.note||'')+' · '+x.c.date+'</div></div><div style="font-size:18px;font-weight:700;color:var(--accent)">'+(x.d<0?'已至':x.d===0?'今天':x.d+'天')+'</div></div>').join(''));
+    addFn='addCountdown()';}
+  else if(k==='mood'){const cur=DB.mood.filter(x=>x.date&&x.date.slice(0,7)===ym);
+    sum=sumCards([['本月心情',cur.length+' 条','#BFC9A9'],['累计',DB.mood.length+' 条','#C7BAD2'],['最近',DB.mood.length?esc([...DB.mood].reverse()[0].text.slice(0,8)):'—','#C9A8A4']]);
+    const list=[...DB.mood].reverse().slice(0,15);
+    flow=flowList(list.map(x=>'<div class="item"><div class="main"><div class="t">'+esc(x.text)+'</div><div class="s">'+fmtMD(x.date)+'</div></div></div>').join(''));
+    addFn='openForm(\'记录心情\',[{k:\'text\',label:\'此刻的心情\',type:\'text\'}],{},v=>{DB.mood.push({id:uid(),date:todayStr(),text:v.text});save();renderBack();toast(\'已记录\');})';}
+  else if(k==='travel'){const cur=DB.travel.filter(t=>t.date&&t.date.slice(0,7)===ym);
+    sum=sumCards([['本月足迹',cur.length+' 处','#A9BFC9'],['总足迹',DB.travel.length+' 处','#B7C7B4'],['省份',new Set(DB.travel.map(t=>t.prov).filter(Boolean)).size+' 个','#C9A8A4']]);
+    const list=[...DB.travel].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
+    flow=flowList(list.map(t=>'<div class="item" onclick="editTravel(\''+t.id+'\')"><div class="main"><div class="t">'+esc(t.place||'足迹')+'</div><div class="s">'+(t.prov||'')+' · '+fmtMD(t.date)+'</div></div></div>').join(''));
+    addFn='travelAddPlace()';}
+  else{const comp=DB.todos.filter(t=>t.status==='已完成'&&t.doneDate&&t.doneDate.slice(0,7)===ym).length;
+    const ing=DB.todos.filter(t=>t.status==='进行中').length;const pend=DB.todos.filter(t=>t.status==='待处理').length;
+    sum=sumCards([['本月完成',comp+' 项','#C9A8A4'],['进行中',ing+' 项','#AEBFC9'],['待处理',pend+' 项','#C7BAD2']]);
+    const list=[...DB.todos].sort((a,b)=>(b.created||'').localeCompare(a.created||'')).slice(0,15);
+    flow=flowList(list.map(t=>'<div class="item" onclick="editTodo(\''+t.id+'\')"><div class="main"><div class="t">'+esc(t.title)+'</div><div class="s"><span class="pill '+(t.priority==='高'?'h':t.priority==='中'?'m':'l')+'">'+t.priority+'</span> '+t.status+'</div></div></div>').join(''));
+    addFn='addTodo()';}
+  return card(m.i+' '+m.n,'',sum+flow,'<button class="hiadd" onclick="'+addFn+'">＋</button>');
 }
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
 
