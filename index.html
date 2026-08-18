@@ -65,17 +65,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
 .card h3{margin:0 0 10px;font-size:14px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:7px;letter-spacing:.5px}
 .card h3 .more{margin-left:auto;font-size:12px;color:var(--accent);font-weight:500}
-.hometop{display:flex;justify-content:space-between;align-items:flex-end;margin:6px 2px 14px}
+.hometop{display:flex;justify-content:space-between;align-items:flex-end;margin:8px 4px 16px}
 .hi{font-size:21px;font-weight:600;color:var(--ink)}
 .hi .nm{color:var(--accent)}
-.datebox{text-align:right;color:var(--ink2);font-size:12.5px;line-height:1.5}
-.datebox .wt{font-size:15px;color:var(--ink);font-weight:500}
-.datebox .wt .ti{font-size:18px;margin-right:3px}
-.hometop.oneline{display:block;margin:6px 2px 14px}
-.hometop.oneline .hi{font-size:18px;display:flex;flex-wrap:wrap;align-items:center;gap:7px;line-height:1.5}
-.hometop.oneline .nm{font-size:18px}
-.hometop.oneline .wt{font-size:15px;color:var(--ink);font-weight:500}
-.hometop.oneline .wt .ti{font-size:16px;margin-right:2px}
+.datebox{text-align:right;color:var(--ink2);font-size:12.5px;line-height:1.55}
+.datebox .dt{font-size:14px;color:var(--ink);letter-spacing:.5px}
+.datebox .wt{font-size:18px;color:var(--ink);font-weight:600;display:flex;align-items:center;gap:3px;justify-content:flex-end}
+.datebox .wt .ti{font-size:20px;margin-right:1px}
+.datebox .city{font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:3px;justify-content:flex-end;margin-top:2px}
 .hiadd{margin-left:auto;width:32px;height:32px;border-radius:50%;background:var(--card2);color:var(--accent);font-size:20px;display:flex;align-items:center;justify-content:center;flex:none}
 .hiadd:active{transform:scale(.9)}
 .newsmini{display:flex;justify-content:flex-end}
@@ -504,7 +501,7 @@ function openModule(title,viewFn,after){curTitle=title;curViewFn=(typeof viewFn=
   subBack=()=>{if(curTab==='home')renderHome();else if(curTab==='branch')renderBranch();else if(curTab==='month')renderMonth();else renderMe();};
   $('#subhdr').style.display='flex';$('#subtitle').textContent=title;
   $('#view').innerHTML=curViewFn();if(after)after();window.scrollTo(0,0);}
-function goBack(){if(subBack)subBack();else switchTab(curTab);}
+function goBack(){$('#subhdr').style.display='none';if(subBack)subBack();else switchTab(curTab);}
 
 /* ============ 首页 ============ */
 const QUOTES=[
@@ -533,7 +530,8 @@ function renderHome(){curViewFn=null;
   // 核心卡
   const cd=coreCards();
   $('#view').innerHTML=
-    '<div class="hometop oneline"><div class="hi"><span class="nm">00</span>，'+g+' · '+dateStr+' · <span class="wt" id="wx">'+wxHtml+'</span> · <span id="wxcity">'+wxcity+'</span></div></div>'+
+    '<div class="hometop"><div class="hi"><span class="nm">00</span>，'+g+'~</div>'+
+      '<div class="datebox"><div class="dt">'+dateStr+'</div><div class="wt" id="wx">'+wxHtml+'</div><div class="city" id="wxcity">'+wxcity+'</div></div></div>'+
     card('📜 日箴', quoteIcons(), quoteHtml())+
     card('📰 知讯','',newsHtml(),newsRestoreIcon())+
     card('✅ 待办事项','查看看板',
@@ -809,33 +807,34 @@ function periodView(){const cyc=DB.periodCycle||28,plen=DB.periodLen||5;
   const starts=periodStarts();const lastStart=starts.length?starts[starts.length-1]:null;
   const recSet=new Set(DB.period.map(p=>p.date));
   function classify(ds){if(recSet.has(ds))return 'rec';if(lastStart){const d=daysBetween(lastStart,ds);const ph=((d%cyc)+cyc)%cyc;
-    if(ph<plen)return 'predP';const ov=cyc-14;if(ph===ov)return 'ovu';if(ph>=ov-2&&ph<=ov+2)return 'fert';return 'safe';}return '';}
+    if(ph<plen)return 'predP';const ov=cyc-14;if(ph===ov)return 'ovu';if(ph>=ov-2&&ph<=ov+2)return 'fert';return '';}return '';}
   const first=new Date(py,pm-1,1).getDay();const days=new Date(py,pm,0).getDate();
   let h='<div class="calnav"><button onclick="setPeriodYM(-1)">‹</button><span>'+py+'年'+pm+'月</span><button onclick="setPeriodYM(1)">›</button></div>'+
     '<div class="wk">'+['日','一','二','三','四','五','六'].map(w=>'<span>'+w+'</span>').join('')+'</div><div class="cal">';
   for(let i=0;i<first;i++)h+='<div></div>';
   for(let d=1;d<=days;d++){const ds=py+'-'+String(pm).padStart(2,'0')+'-'+String(d).padStart(2,'0');const tp=classify(ds);const on=recSet.has(ds);
-    const ic=tp==='rec'||tp==='predP'?'🌸':tp==='ovu'?'💫':tp==='fert'?'🌀':tp==='safe'?'🌿':'';
+    const ic=tp==='rec'||tp==='predP'?'🌸':tp==='ovu'?'💫':tp==='fert'?'🌀':'';
     h+='<div class="cd'+(ds===todayStr()?' today':'')+' ph-'+tp+(on?' hm':'')+'" onclick="togglePeriod(\''+ds+'\')">'+d+(ic?'<span class="ph">'+ic+'</span>':'')+'</div>';}
   h+='</div>';
-  const pd=predictPeriod();let fut='';
-  if(lastStart){for(let k=1;k<=3;k++){const nx=new Date(lastStart+'T00:00');nx.setDate(nx.getDate()+cyc*k);const nds=todayStr(nx);if(daysBetween(todayStr(),nds)>=0)fut+='<span class="chip">'+nds.slice(5)+'</span>';}}
-  const body='<div class="statline"><span>周期长度</span><span class="v">'+cyc+' 天 · <span style="color:var(--accent)" onclick="setPeriodCycle()">调整</span></span></div>'+
-    '<div class="statline"><span>经期长度</span><span class="v">'+plen+' 天 · <span style="color:var(--accent)" onclick="setPeriodLen()">调整</span></span></div>'+
-    '<div class="statline"><span>累积</span><span class="v">'+DB.period.length+' 天 / 约 '+starts.length+' 周期</span></div>'+
-    '<div class="statline"><span>预计下次</span><span class="v">'+(pd?(pd.days<0?('已过 '+Math.abs(pd.days)+' 天'):pd.days===0?'就是今天':pd.days+' 天后')+'（'+pd.next+'）':'先标记几天')+'</span></div>'+
-    (fut?'<div class="statline"><span>未来预测</span><span class="v">'+fut+'</span></div>':'')+
-    '<div class="legend">'+legendHtml()+'</div>'+h;
-  return card('🌸 经期','',body);
+  h+='<div class="legend">'+legendHtml()+'</div>';
+  const pd=predictPeriod();
+  const nxt=pd?(pd.days<0?('已过 '+Math.abs(pd.days)+' 天'):pd.days===0?'就是今天':pd.days+' 天后')+'（'+pd.next+'）':'先标记几天';
+  return card('🌸 经期','<button class="hiadd" style="font-size:13px" onclick="openPeriodSettings()">⚙</button>',
+    '<div class="statline" style="background:var(--card2);border-radius:12px;padding:10px 12px;margin-bottom:10px"><span style="font-size:13px;color:var(--ink2)">下次经期</span><span class="v" style="font-size:15px;font-weight:600;color:var(--accent)">'+nxt+'</span></div>'+
+    h);
 }
 function setPeriodCycle(){const v=prompt('周期长度（天，默认 28）',DB.periodCycle||28);if(v&&+v>0){DB.periodCycle=+v;save();renderBack();toast('已设为 '+v+' 天');}}
 function setPeriodLen(){const v=prompt('经期长度（天，默认 5）',DB.periodLen||5);if(v&&+v>0){DB.periodLen=+v;save();renderBack();toast('已设为 '+v+' 天');}}
+function openPeriodSettings(){openModal('<div class="sheet"><h3>经期设置 <span class="x" onclick="closeModal()">×</span></h3>'+
+  '<div class="statline"><span>周期长度</span><span class="v">'+(DB.periodCycle||28)+' 天 · <span style="color:var(--accent)" onclick="setPeriodCycle()">调整</span></span></div>'+
+  '<div class="statline"><span>经期长度</span><span class="v">'+(DB.periodLen||5)+' 天 · <span style="color:var(--accent)" onclick="setPeriodLen()">调整</span></span></div>'+
+  '<div class="statline"><span>累积记录</span><span class="v">'+DB.period.length+' 天 / 约 '+periodStarts().length+' 周期</span></div></div>');}
 function setPeriodYM(d){const a=periodViewYM.split('-').map(Number);const dt=new Date(a[0],a[1]-1+d,1);periodViewYM=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');renderBack();}
 function bindPeriod(){}
 function togglePeriod(ds){const i=DB.period.findIndex(p=>p.date===ds);if(i>=0)DB.period.splice(i,1);else DB.period.push({id:uid(),date:ds});save();renderBack();}
 function periodStarts(){const ds=DB.period.map(p=>p.date).sort();if(!ds.length)return[];const starts=[];let prev=null;ds.forEach(d=>{if(!prev||daysBetween(prev,d)>3)starts.push(d);prev=d;});return starts;}
 function predictPeriod(){const starts=periodStarts();if(!starts.length)return null;const cyc=DB.periodCycle||28;const last=starts[starts.length-1];const next=new Date(last+'T00:00');next.setDate(next.getDate()+cyc);const nd=todayStr(next);return {days:daysBetween(todayStr(),nd),avg:cyc,next:nd};}
-function legendHtml(){return '<span class="lg"><i>🌸</i>经期</span><span class="lg"><i>💫</i>排卵</span><span class="lg"><i>🌀</i>易孕</span><span class="lg"><i>🌿</i>安全</span>';}
+function legendHtml(){return '<span class="lg"><i>🌸</i>经期</span><span class="lg"><i>💫</i>排卵</span><span class="lg"><i>🌀</i>易孕</span>';}
 
 /* 倒数 */
 function countdownView(){const list=DB.countdown.map(c=>({c,d:daysBetween(todayStr(),c.date)})).sort((a,b)=>a.d-b.d);
