@@ -396,7 +396,7 @@ function drawChina(canvas,opts){
 <script>
 /* ============ 基础 ============ */
 const LS_KEY='lynn_v1';
-const DEF={pinHash:null,net:false,city:{name:'香港',lat:22.3193,lng:114.1694},todos:[],ledger:[],diet:[],sleep:[],study:[],travel:[],period:[],periodCycle:28,periodLen:5,countdown:[],mood:[],quotes_fav:[],news:[],news_read:[],weather:null,sleepGoal:8,studyGoal:null};
+const DEF={pinHash:null,net:false,city:{name:'香港',lat:22.3193,lng:114.1694},todos:[],ledger:[],diet:[],sleep:[],study:[],travel:[],period:[],periodCycle:28,periodLen:5,periodMonths:3,countdown:[],mood:[],quotes_fav:[],news:[],news_read:[],news_showRead:false,weather:null,sleepGoal:8,studyGoal:null};
 let DB=Object.assign({},DEF,JSON.parse(localStorage.getItem(LS_KEY)||'{}'));
 function save(){localStorage.setItem(LS_KEY,JSON.stringify(DB));}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
@@ -519,7 +519,7 @@ function renderHome(){curViewFn=null;
     '<div class="hometop"><div class="hi"><span class="nm">00</span>，'+g+'~</div>'+
       '<div class="datebox"><div>'+dateStr+'</div><div class="wt" id="wx">'+wxHtml+'</div>'+
       '<div style="font-size:11.5px;opacity:.8" id="wxcity">'+(DB.city?DB.city.name:'—')+'</div></div></div>'+
-    card('📜 日箴','',quoteHtml())+
+    card('📜 日箴', quoteIcons(), quoteHtml())+
     card('📰 知讯','',newsHtml())+
     card('✅ 待办事项','查看看板',
       '<div class="todoov"><div><div class="num">'+todoUn+'</div><div class="lbl">今日待完成</div></div>'+
@@ -532,7 +532,8 @@ function renderHome(){curViewFn=null;
 function greet(){const h=new Date().getHours();if(h<6)return'晚上好';if(h<12)return'早上好';if(h<14)return'中午好';if(h<18)return'下午好';return'晚上好';}
 function card(t,more,body){return '<div class="card"><h3>'+t+(more?'<span class="more" onclick="'+moreClick(more)+'">'+more+'</span>':'')+'</h3>'+body+'</div>';}
 function moreClick(m){if(m==='查看看板')return "openModule('待办事项',todoView,bindTodo)";return '';}
-function quoteHtml(){return '<div class="quote" id="qtext"></div><div class="quotebar"><button class="qico" onclick="refreshQuote()" title="换一句">↻</button><button class="qico fav" id="favbtn" onclick="favQuote()" title="收藏">♡</button></div>';}
+function quoteHtml(){return '<div class="quote" id="qtext"></div>';}
+function quoteIcons(){return '<button class="qico" onclick="refreshQuote()" title="换一句">↻</button><button class="qico fav" id="favbtn" onclick="favQuote()" title="收藏">♡</button>';}
 function paintQuote(){$('#qtext').innerHTML=curQuote.c+'<span class="src">'+curQuote.e+'</span>';const fav=DB.quotes_fav.some(q=>q.c===curQuote.c);const b=$('#favbtn');if(b){b.innerHTML=(fav?'♥':'♡');b.classList.toggle('fav',fav);}}
 function refreshQuote(){curQuote=QUOTES[Math.floor(Math.random()*QUOTES.length)];paintQuote();}
 function favQuote(){const i=DB.quotes_fav.findIndex(q=>q.c===curQuote.c);if(i>=0){DB.quotes_fav.splice(i,1);toast('已取消收藏');}else{DB.quotes_fav.push(curQuote);toast('已收藏');}save();paintQuote();}
@@ -544,10 +545,16 @@ const FALLBACK_NEWS=[
   {id:'f4',title:'人工智能监管框架草拟，聚焦数据安全',summary:'多国就训练数据合规与算法透明展开讨论。',hot:''},
   {id:'f5',title:'极端天气频发，城市韧性建设受关注',summary:'气象部门提示加强排水与应急体系。',hot:''}
 ];
-function newsHtml(){const read=new Set(DB.news_read);const list=(DB.news&&DB.news.length?DB.news:FALLBACK_NEWS).filter(n=>!read.has(n.id));
-  if(!list.length)return '<div class="news"><div class="empty">今日资讯已阅毕 · <span style="color:var(--accent)" onclick="DB.news_read=[];save();renderHome()">点此恢复</span></div></div>';
-  return '<div class="news">'+list.map(n=>'<div class="ni" onclick="toggleNews(\''+n.id+'\')"><div class="t">'+esc(n.title)+(DB._openNews===n.id?'<div class="sum">'+esc(n.summary||'（公开热榜资讯，仅供参考）')+(n.hot?' · 🔥'+n.hot:'')+'</div>':'')+'</div>'+(n.hot?'<div class="hot">🔥'+n.hot+'</div>':'')+'</div>').join('')+'</div>';}
+function newsHtml(){const read=new Set(DB.news_read);const all=(DB.news&&DB.news.length?DB.news:FALLBACK_NEWS);
+  const unread=all.filter(n=>!read.has(n.id));const readList=all.filter(n=>read.has(n.id));
+  let h='<div class="news">';
+  if(unread.length)h+=unread.map(n=>'<div class="ni" onclick="toggleNews(\''+n.id+'\')"><div class="t">'+esc(n.title)+(DB._openNews===n.id?'<div class="sum">'+esc(n.summary||'（公开热榜资讯，仅供参考）')+(n.hot?' · 🔥'+n.hot:'')+'</div>':'')+'</div>'+(n.hot?'<div class="hot">🔥'+n.hot+'</div>':'')+'</div>').join('');
+  else h+='<div class="empty">今日资讯已阅毕</div>';
+  if(readList.length)h+='<div class="newsfoot"><span class="rst" onclick="toggleNewsShow()">'+(DB.news_showRead?'收起已读 ▴':'↺ 恢复已读 ('+readList.length+')')+'</span></div>';
+  if(DB.news_showRead&&readList.length)h+=readList.map(n=>'<div class="ni read" onclick="toggleNews(\''+n.id+'\')"><div class="t">'+esc(n.title)+(DB._openNews===n.id?'<div class="sum">'+esc(n.summary||'（公开热榜资讯，仅供参考）')+'</div>':'')+'</div></div>').join('');
+  h+='</div>';return h;}
 function toggleNews(id){DB._openNews=(DB._openNews===id?null:id);if(DB._openNews===id){if(!DB.news_read.includes(id)){DB.news_read.push(id);save();}}renderHome();}
+function toggleNewsShow(){DB.news_showRead=!DB.news_showRead;save();renderHome();}
 function loadNews(){if(!DB.net){DB.news=[];save();return;}fetch('https://api.vvhan.com/api/hotlist/wbHot').then(r=>r.json()).then(j=>{const it=(j.data||[]).slice(0,5).map((d,i)=>({id:'n'+i,title:d.title,hot:d.hot||'',summary:''}));if(it.length){DB.news=it;save();}}).catch(()=>{}).finally(()=>{});}
 /* 核心卡 */
 function coreCards(){
@@ -566,7 +573,7 @@ function coreCards(){
   const expC=DB.ledger.filter(l=>l.type==='支出'&&l.date===t&&l.cur==='CNY').reduce((s,l)=>s+(+l.amount||0),0);
   if(expH||expC){lg.v=(expH?('HK$'+Math.round(expH)):'')+(expH&&expC?' · ':'')+(expC?('¥'+Math.round(expC)):'');lg.s='今日支出';}else{lg.v='记一笔';lg.s='今日支出';}
   // 饮食
-  let di={icon:'🍽️',t:'饮食',click:"openModule('饮食记录',dietView,bindDiet)"};
+  let di={icon:'🍽️',t:'饮食',click:"addDiet()"};
   const lastD=[...DB.diet].reverse()[0];
   if(lastD){di.v=lastD.title||'最近一餐';di.s=lastD.desc?lastD.desc.slice(0,18):'查看';}else{di.v='记录一餐';di.s='今日饮食';}
   // 睡眠
@@ -602,7 +609,7 @@ const MODULES=[
 ];
 function renderBranch(){curViewFn=null;const cards=MODULES.map(m=>{
   const cnt=DB[m.k]?DB[m.k].length:0;
-  const fn=m.k==='ledger'?'chooseCurrency()':('openModule(\''+m.n+'\','+m.k+'View,bind'+cap(m.k)+'())');
+  const fn=m.k==='ledger'?'chooseCurrency()':(m.k==='diet'?'addDiet()':('openModule(\''+m.n+'\','+m.k+'View,bind'+cap(m.k)+'())'));
   return '<div class="gcard" style="min-height:88px" onclick="'+fn+'"><div class="gi">'+m.i+'</div><div class="gt">'+m.n+'</div><div class="gs">'+cnt+' 条记录</div></div>';
 }).join('');
   $('#view').innerHTML='<div class="hi" style="margin:4px 2px 12px">🌿 支线</div><div class="grid">'+cards+'</div>'+
@@ -650,9 +657,11 @@ function editTodo(id){const t=DB.todos.find(x=>x.id===id);if(!t)return;openForm(
 ],{},v=>{Object.assign(t,v);save();renderBack();toast('已保存');},()=>{DB.todos=DB.todos.filter(x=>x.id!==id);save();renderBack();toast('已删除');});}
 
 /* 记账 */
-function chooseCurrency(){openModal('<div class="sheet"><h3>选择币种 <span class="x" onclick="closeModal()">×</span></h3>'+
-  '<button class="btn block" style="margin-bottom:11px;background:linear-gradient(135deg,#DBCBB8,#C9A8A4)" onclick="closeModal();openModule(\'记账 · 港币\',ledgerView(\'HKD\'),function(){bindLedger(\'HKD\')})">🇭🇰 港币 HKD</button>'+
-  '<button class="btn block" style="background:linear-gradient(135deg,#B7C7B4,#AEBFC9)" onclick="closeModal();openModule(\'记账 · 人民币\',ledgerView(\'CNY\'),function(){bindLedger(\'CNY\')})">🇨🇳 人民币 CNY</button></div>');}
+function chooseCurrency(){openModal('<div class="sheet"><h3>记账 <span class="x" onclick="closeModal()">×</span></h3>'+
+  '<button class="btn block" style="margin-bottom:10px;background:linear-gradient(135deg,#DBCBB8,#C9A8A4)" onclick="closeModal();addLedger(\'HKD\')">🇭🇰 港币 HKD · 记一笔</button>'+
+  '<button class="btn block" style="background:linear-gradient(135deg,#B7C7B4,#AEBFC9)" onclick="closeModal();addLedger(\'CNY\')">🇨🇳 人民币 CNY · 记一笔</button>'+
+  '<button class="btn soft" style="margin-top:10px;width:100%" onclick="closeModal();openModule(\'记账记录\',ledgerAllView,bindLedgerAll)">📋 查看历史记录</button></div>');}
+function ledgerPay(cur){return cur==='HKD'?['八达通','现金','visa','master','alipay','wechat','银行卡','其他']:['微信','支付宝','现金','银行卡','其他'];}
 function ledgerView(cur){const list=DB.ledger.filter(l=>l.cur===cur).slice(-30).reverse();
   const pay=cur==='HKD'?['八达通','现金','信用卡','银行卡','Alipay','WeChat','其他']:['微信','支付宝','现金','银行卡','其他'];
   const cat=['餐饮','交通','购物','居家','娱乐','医疗','教育','其他'];
@@ -666,28 +675,32 @@ function ledgerType(cur,v){document.querySelectorAll('[data-lt]').forEach(b=>b.c
 function ledgerRender(cur,type){const cat=['餐饮','交通','购物','居家','娱乐','医疗','教育','其他'];
   const pay=cur==='HKD'?['八达通','现金','信用卡','银行卡','Alipay','WeChat','其他']:['微信','支付宝','现金','银行卡','其他'];
   const list=DB.ledger.filter(l=>l.cur===cur&&l.type===type).slice(-40).reverse();
-  $('#ledgerbody').innerHTML=list.length?('<div class="list">'+list.map(l=>'<div class="item" onclick="editLedger(\''+l.id+'\')"><div class="main"><div class="t">'+(type==='支出'?'':'+')+(cur==='HKD'?'HK$':'¥')+Math.round(l.amount)+' · '+l.cat+'</div><div class="s">'+(l.pay||'')+(l.note?' · '+l.note:'')+' · '+fmtMD(l.date)+'</div></div></div>').join('')+'</div>'):'<div class="empty">暂无'+type+'记录</div>';
+  $('#ledgerbody').innerHTML=list.length?('<div class="list">'+list.map(l=>'<div class="item" onclick="editLedger(\''+l.id+'\')"><div class="main"><div class="t">'+(type==='支出'?'':'+')+(cur==='HKD'?'HK$':'¥')+Math.round(l.amount)+' · '+l.cat+'</div><div class="s">'+(l.owner?('['+l.owner+'] '):'')+(l.detail||l.note||'')+(l.pay?(' · '+l.pay):'')+' · '+fmtMD(l.date)+'</div></div></div>').join('')+'</div>'):'<div class="empty">暂无'+type+'记录</div>';
 }
-function addLedger(cur){const pay=cur==='HKD'?['八达通','现金','信用卡','银行卡','Alipay','WeChat','其他']:['微信','支付宝','现金','银行卡','其他'];
+function addLedger(cur){const pay=ledgerPay(cur);
   const cat=['餐饮','交通','购物','居家','娱乐','医疗','教育','其他'];
-  openForm('新增'+(cur==='HKD'?'港币':'人民币')+'记录',[
+  openForm('记一笔 · '+(cur==='HKD'?'港币':'人民币'),[
   {k:'type',label:'类型',type:'select',options:['支出','收入'],def:'支出'},
   {k:'amount',label:'金额 ('+(cur==='HKD'?'HKD':'CNY')+')',type:'num',def:''},
+  {k:'detail',label:'支出明细',type:'text',def:''},
   {k:'pay',label:'支付方式',type:'select',options:pay,def:pay[0]},
+  {k:'owner',label:'归属',type:'select',options:['个人','家庭'],def:'个人'},
   {k:'cat',label:'分类',type:'select',options:cat,def:'餐饮'},
-  {k:'date',label:'日期',type:'date',def:todayStr()},
-  {k:'note',label:'备注',type:'text',def:''}
-],{},v=>{v.cur=cur;DB.ledger.push(Object.assign({id:uid()},v));save();renderBack();toast('已记录');});}
-function editLedger(id){const l=DB.ledger.find(x=>x.id===id);if(!l)return;const cur=l.cur;const pay=cur==='HKD'?['八达通','现金','信用卡','银行卡','Alipay','WeChat','其他']:['微信','支付宝','现金','银行卡','其他'];
+  {k:'date',label:'日期',type:'date',def:todayStr()}
+],{},v=>{v.cur=cur;DB.ledger.push(Object.assign({id:uid()},v));save();renderBack();toast('已记录');},null,'<button class="btn soft" style="width:100%;margin-top:8px" onclick="closeModal();openModule(\'记账记录\',ledgerAllView,bindLedgerAll)">📋 查看历史记录</button>');}
+function editLedger(id){const l=DB.ledger.find(x=>x.id===id);if(!l)return;const cur=l.cur;const pay=ledgerPay(cur);
   const cat=['餐饮','交通','购物','居家','娱乐','医疗','教育','其他'];
   openForm('编辑记录',[
   {k:'type',label:'类型',type:'select',options:['支出','收入'],def:l.type||'支出'},
   {k:'amount',label:'金额',type:'num',def:l.amount||''},
+  {k:'detail',label:'支出明细',type:'text',def:l.detail||''},
   {k:'pay',label:'支付方式',type:'select',options:pay,def:l.pay||pay[0]},
+  {k:'owner',label:'归属',type:'select',options:['个人','家庭'],def:l.owner||'个人'},
   {k:'cat',label:'分类',type:'select',options:cat,def:l.cat||'餐饮'},
-  {k:'date',label:'日期',type:'date',def:l.date||''},
-  {k:'note',label:'备注',type:'text',def:l.note||''}
+  {k:'date',label:'日期',type:'date',def:l.date||''}
 ],{},v=>{v.cur=cur;Object.assign(l,v);save();renderBack();toast('已保存');},()=>{DB.ledger=DB.ledger.filter(x=>x.id!==id);save();renderBack();toast('已删除');});}
+function ledgerAllView(){return card('💰 记账记录','', '<div id="ledgerall"></div>')+'';}
+function bindLedgerAll(){const list=[...DB.ledger].reverse();$('#ledgerall').innerHTML=list.length?('<div class="list">'+list.map(l=>'<div class="item" onclick="editLedger(\''+l.id+'\')"><div class="main"><div class="t">'+(l.type==='收入'?'+':'-')+(l.cur==='HKD'?'HK$':'¥')+Math.round(l.amount)+' · '+l.cat+'</div><div class="s">'+(l.owner?('['+l.owner+'] '):'')+(l.detail||'')+(l.pay?(' · '+l.pay):'')+' · '+fmtMD(l.date)+'</div></div></div>').join('')+'</div>'):'<div class="empty">暂无记录</div>';}
 
 /* 饮食 */
 function dietView(){const list=[...DB.diet].reverse();
@@ -701,7 +714,7 @@ function addDiet(){const meals=['早餐','午餐','晚餐','加餐'];
   {k:'date',label:'日期',type:'date',def:todayStr()},
   {k:'desc',label:'食物描述',type:'textarea',def:''},
   {k:'photo',label:'照片',type:'photo',def:''}
-],{},v=>{v.title=v.date+' '+v.meal;DB.diet.push(Object.assign({id:uid()},v));save();renderBack();toast('已记录');});}
+],{},v=>{v.title=v.date+' '+v.meal;DB.diet.push(Object.assign({id:uid()},v));save();renderBack();toast('已记录');},null,'<button class="btn soft" style="width:100%;margin-top:8px" onclick="closeModal();openModule(\'饮食记录\',dietView,bindDiet)">📋 查看记录</button>');}
 function editDiet(id){const d=DB.diet.find(x=>x.id===id);if(!d)return;const meals=['早餐','午餐','晚餐','加餐'];
   openForm('编辑饮食',[
   {k:'meal',label:'餐别',type:'select',options:meals,def:d.meal||'早餐'},
@@ -768,27 +781,40 @@ function renderStudyList(){const t=todayStr();const list=DB.study.filter(s=>s.da
   $('#studylist').innerHTML=list.length?list.map(s=>'<div class="item"><div class="main"><div class="t">'+s.dur+' 分钟 · '+s.type+'</div><div class="s">'+(s.subject||'')+(s.focus?' · '+s.focus:'')+'</div></div></div>').join(''):'<div class="empty">今日尚无记录</div>';}
 
 /* 经期 */
-function periodView(){const y=new Date().getFullYear(),m=new Date().getMonth();const first=new Date(y,m,1).getDay();const days=new Date(y,m+1,0).getDate();
-  const marks={};DB.period.forEach(p=>{if(p.date.slice(0,7)===y+'-'+String(m+1).padStart(2,'0'))marks[p.date]=(marks[p.date]||0)+1;});
-  let h='<div class="cal">';for(let i=0;i<first;i++)h+='<div></div>';
-  for(let d=1;d<=days;d++){const ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');const on=marks[ds];
-    h+='<div class="cd'+(ds===todayStr()?' today':'')+(on?' hm':'')+'" onclick="togglePeriod(\''+ds+'\')">'+d+(on?'<span class="dn">🌸</span>':'')+'</div>';}
-  h+='</div>';
-  const pd=predictPeriod();
-  const cyc=DB.periodCycle||28,plen=DB.periodLen||5;
-  return card('🌸 经期 · 周期记录','',
+function periodView(){const months=DB.periodMonths||3;const cyc=DB.periodCycle||28,plen=DB.periodLen||5;
+  const starts=periodStarts();const lastStart=starts.length?starts[starts.length-1]:null;
+  const recSet=new Set(DB.period.map(p=>p.date));
+  function classify(ds){if(recSet.has(ds))return 'rec';if(lastStart){const d=daysBetween(lastStart,ds);const ph=((d%cyc)+cyc)%cyc;
+    if(ph<plen)return 'predP';const ov=cyc-14;if(ph===ov)return 'ovu';if(ph>=ov-2&&ph<=ov+2)return 'fert';return 'safe';}return '';}
+  const now=new Date();let calHtml='';
+  for(let mi=0;mi<months;mi++){const base=new Date(now.getFullYear(),now.getMonth()+mi,1);const cyy=base.getFullYear(),cmm=base.getMonth();
+    const first=new Date(cyy,cmm,1).getDay();const days=new Date(cyy,cmm+1,0).getDate();
+    let h='<div class="calhd">'+cyy+'年'+(cmm+1)+'月</div><div class="wk">'+['日','一','二','三','四','五','六'].map(w=>'<span>'+w+'</span>').join('')+'</div><div class="cal">';
+    for(let i=0;i<first;i++)h+='<div></div>';
+    for(let d=1;d<=days;d++){const ds=cyy+'-'+String(cmm+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');const tp=classify(ds);const on=recSet.has(ds);
+      const ic=tp==='rec'||tp==='predP'?'🌸':tp==='ovu'?'💫':tp==='fert'?'🌀':tp==='safe'?'🌿':'';
+      h+='<div class="cd'+(ds===todayStr()?' today':'')+' ph-'+tp+(on?' hm':'')+'" onclick="togglePeriod(\''+ds+'\')">'+d+(ic?'<span class="ph">'+ic+'</span>':'')+'</div>';}
+    h+='</div>';calHtml+=h;}
+  const pd=predictPeriod();let fut='';
+  if(lastStart){for(let k=1;k<=3;k++){const nx=new Date(lastStart+'T00:00');nx.setDate(nx.getDate()+cyc*k);const nds=todayStr(nx);if(daysBetween(todayStr(),nds)>=0)fut+='<span class="chip">'+nds.slice(5)+'</span>';}}
+  const body='<div class="seg" style="margin-bottom:10px">'+[1,2,3,6].map(n=>'<button class="'+(n===months?'on':'')+'" onclick="setPeriodMonths('+n+')">'+n+'月</button>').join('')+'</div>'+
     '<div class="statline"><span>周期长度</span><span class="v">'+cyc+' 天 · <span style="color:var(--accent)" onclick="setPeriodCycle()">调整</span></span></div>'+
     '<div class="statline"><span>经期长度</span><span class="v">'+plen+' 天 · <span style="color:var(--accent)" onclick="setPeriodLen()">调整</span></span></div>'+
-    '<div class="statline"><span>本期已标记</span><span class="v">'+DB.period.filter(p=>p.date.slice(0,7)===y+'-'+String(m+1).padStart(2,'0')).length+' 天</span></div>'+
-    '<div class="statline"><span>预计下次</span><span class="v">'+(pd?(pd.days<0?('已过 '+Math.abs(pd.days)+' 天'):pd.days===0?'就是今天':pd.days+' 天后')+'（'+pd.next+'）':'数据不足，先标记几天')+'</span></div>'+
-    '<div style="font-size:12px;color:var(--ink2);margin:10px 2px">点击日期标记 / 取消经期</div>'+h)+'';
+    '<div class="statline"><span>累积记录</span><span class="v">'+DB.period.length+' 天经期 / 约 '+starts.length+' 个周期</span></div>'+
+    '<div class="statline"><span>预计下次</span><span class="v">'+(pd?(pd.days<0?('已过 '+Math.abs(pd.days)+' 天'):pd.days===0?'就是今天':pd.days+' 天后')+'（'+pd.next+'）':'先标记几天')+'</span></div>'+
+    (fut?'<div class="statline"><span>未来预测</span><span class="v">'+fut+'</span></div>':'')+
+    '<div class="legend">'+legendHtml()+'</div>'+
+    '<div class="maphint" style="margin:8px 2px">点日期标记/取消经期🌸；排卵💫·易孕🌀·安全🌿依周期推算</div>'+calHtml;
+  return card('🌸 经期 · 周期与预测','',body);
 }
 function setPeriodCycle(){const v=prompt('周期长度（天，默认 28）',DB.periodCycle||28);if(v&&+v>0){DB.periodCycle=+v;save();renderBack();toast('已设为 '+v+' 天');}}
 function setPeriodLen(){const v=prompt('经期长度（天，默认 5）',DB.periodLen||5);if(v&&+v>0){DB.periodLen=+v;save();renderBack();toast('已设为 '+v+' 天');}}
+function setPeriodMonths(n){DB.periodMonths=n;save();renderBack();}
 function bindPeriod(){}
 function togglePeriod(ds){const i=DB.period.findIndex(p=>p.date===ds);if(i>=0)DB.period.splice(i,1);else DB.period.push({id:uid(),date:ds});save();renderBack();}
 function periodStarts(){const ds=DB.period.map(p=>p.date).sort();if(!ds.length)return[];const starts=[];let prev=null;ds.forEach(d=>{if(!prev||daysBetween(prev,d)>3)starts.push(d);prev=d;});return starts;}
 function predictPeriod(){const starts=periodStarts();if(!starts.length)return null;const cyc=DB.periodCycle||28;const last=starts[starts.length-1];const next=new Date(last+'T00:00');next.setDate(next.getDate()+cyc);const nd=todayStr(next);return {days:daysBetween(todayStr(),nd),avg:cyc,next:nd};}
+function legendHtml(){return '<span class="lg"><i>🌸</i>经期</span><span class="lg"><i>💫</i>排卵</span><span class="lg"><i>🌀</i>易孕</span><span class="lg"><i>🌿</i>安全</span>';}
 
 /* 倒数 */
 function countdownView(){const list=DB.countdown.map(c=>({c,d:daysBetween(todayStr(),c.date)})).sort((a,b)=>a.d-b.d);
@@ -954,7 +980,7 @@ function paintWeather(){const wx=DB.weather;const w=$('#wx'),ci=$('#wxcity');if(
   if(!w)return;if(!DB.net)w.innerHTML='<span class="ti">🔒</span><span style="font-size:13px">已离线</span>';else if(wx&&wx.err)w.innerHTML='<span class="ti">🌫️</span><span style="font-size:13px">暂不可知</span>';else if(wx&&wx.offline)w.innerHTML='<span class="ti">🔒</span><span style="font-size:13px">已离线</span>';else if(wx)w.innerHTML='<span class="ti">'+wmoIcon(wx.code)+'</span>'+Math.round(wx.temp)+'°';else w.innerHTML='<span class="ti">🌤️</span>…';}
 
 /* ============ 通用表单弹窗 ============ */
-function openForm(title,fields,values,onSave,onDelete){
+function openForm(title,fields,values,onSave,onDelete,extra){
   let html='<div class="sheet"><h3>'+title+' <span class="x" onclick="closeModal()">×</span></h3>';
   fields.forEach(f=>{
     html+='<div class="fld"><label>'+f.label+'</label>';
@@ -964,7 +990,7 @@ function openForm(title,fields,values,onSave,onDelete){
     else{html+='<input data-k="'+f.k+'" type="'+(f.type==='num'?'number':(f.type==='date'?'date':'text'))+'" value="'+(values[f.k]!==undefined?values[f.k]:(f.def||''))+'" placeholder="'+(f.placeholder||'')+'">';}
     html+='</div>';
   });
-  html+='<div style="display:flex;gap:10px;margin-top:6px">'+(onDelete?'<button class="btn soft" style="flex:1;background:#EBD3CF;color:#9A5E57" onclick="closeModal();__del()">删除</button>':'')+'<button class="btn block" style="flex:2" onclick="__save()">保存</button></div></div>';
+  html+='<div style="display:flex;gap:10px;margin-top:6px">'+(onDelete?'<button class="btn soft" style="flex:1;background:#EBD3CF;color:#9A5E57" onclick="closeModal();__del()">删除</button>':'')+'<button class="btn block" style="flex:2" onclick="__save()">保存</button></div>'+(extra||'')+'</div>';
   openModal(html);
   window.__save=()=>{const v={};fields.forEach(f=>{if(f.type==='select'){const on=document.querySelector('[data-k="'+f.k+'"].on, .opts[data-k="'+f.k+'"] button.on');v[f.k]=on?on.textContent:f.def;}
     else if(f.type==='photo'){v[f.k]=$('#ph_'+f.k).dataset.val||values[f.k]||'';}
@@ -991,6 +1017,15 @@ function drawBars(cv,labels,vals,col,vals2,col2){if(!cv)return;const dpr=window.
 /* 首页趋势在渲染后绘制 */
 const _origRenderHome=renderHome;
 renderHome=function(){_origRenderHome();setTimeout(afterHomeTrends,30);};
+
+/* ============ 右滑返回上一页 ============ */
+(function(){
+  let sx=0,sy=0,ok=false;
+  document.addEventListener('touchstart',e=>{if(e.touches.length!==1){ok=false;return;}const t=e.touches[0];sx=t.clientX;sy=t.clientY;ok=true;},{passive:true});
+  document.addEventListener('touchend',e=>{if(!ok)return;ok=false;const t=e.changedTouches[0];const dx=t.clientX-sx,dy=t.clientY-sy;
+    if(dx>70&&dx>Math.abs(dy)*1.6){const el=e.target;if(el&&(el.closest('#mapCanvas')||el.closest('#leafmap')))return;if(subBack)goBack();}
+  },{passive:true});
+})();
 
 /* ============ 启动 ============ */
 function boot(){showLock();}
