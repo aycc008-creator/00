@@ -99,6 +99,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .news .ni .t{flex:1}
 .news .ni .hot{font-size:11px;color:var(--ink2);white-space:nowrap}
 .news .ni .sum{font-size:12px;color:var(--ink2);margin-top:5px;background:var(--card2);padding:8px 10px;border-radius:10px}
+.news .ni.read{opacity:.55}
+.news .ni .rd{font-size:12px;color:var(--accent);white-space:nowrap}
 .news .empty{font-size:12.5px;color:var(--ink2);text-align:center;padding:8px}
 /* 待办概览 */
 .todoov{display:flex;align-items:center;gap:14px}
@@ -410,7 +412,7 @@ function drawChina(canvas,opts){
 <script>
 /* ============ 基础 ============ */
 const LS_KEY='lynn_v1';
-const DEF={pinHash:null,net:false,city:{name:'香港',lat:22.3193,lng:114.1694},todos:[],ledger:[],diet:[],sleep:[],study:[],travel:[],period:[],periodCycle:28,periodLen:5,periodMonths:3,countdown:[],mood:[],quotes_fav:[],news:[],news_read:[],news_showRead:false,weather:null,sleepGoal:8,studyGoal:null};
+const DEF={pinHash:null,net:false,city:{name:'香港',lat:22.3193,lng:114.1694},todos:[],ledger:[],diet:[],sleep:[],study:[],travel:[],period:[],periodCycle:28,periodLen:5,periodMonths:3,countdown:[],mood:[],quotes_fav:[],news:[],news_read:[],news_collapsed:false,weather:null,sleepGoal:8,studyGoal:null};
 let DB=Object.assign({},DEF,JSON.parse(localStorage.getItem(LS_KEY)||'{}'));
 function save(){localStorage.setItem(LS_KEY,JSON.stringify(DB));}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
@@ -559,14 +561,22 @@ const FALLBACK_NEWS=[
   {id:'f5',title:'极端天气频发，城市韧性建设受关注',summary:'气象部门提示加强排水与应急体系。',hot:''}
 ];
 function newsHtml(){const read=new Set(DB.news_read);const all=(DB.news&&DB.news.length?DB.news:FALLBACK_NEWS);
-  const unread=all.filter(n=>!read.has(n.id));const readList=all.filter(n=>read.has(n.id));
+  if(DB.news_collapsed&&all.length&&all.every(n=>read.has(n.id)))return '';
   let h='<div class="news">';
-  if(unread.length)h+=unread.map(n=>'<div class="ni" onclick="toggleNews(\''+n.id+'\')"><div class="t">'+esc(n.title)+(DB._openNews===n.id?'<div class="sum">'+esc(n.summary||'（公开热榜资讯，仅供参考）')+(n.hot?' · 🔥'+n.hot:'')+'</div>':'')+'</div>'+(n.hot?'<div class="hot">🔥'+n.hot+'</div>':'')+'</div>').join('');
-  if(DB.news_showRead&&readList.length)h+=readList.map(n=>'<div class="ni read" onclick="toggleNews(\''+n.id+'\')"><div class="t">'+esc(n.title)+(DB._openNews===n.id?'<div class="sum">'+esc(n.summary||'（公开热榜资讯，仅供参考）')+'</div>':'')+'</div></div>').join('');
+  h+=all.map(n=>{const isRead=read.has(n.id);const open=DB._openNews===n.id;
+    return '<div class="ni'+(isRead?' read':'')+'" onclick="toggleNews(\''+n.id+'\')">'+
+      '<div class="t">'+esc(n.title)+(open?'<div class="sum">'+esc(n.summary||'（公开热榜资讯，仅供参考）')+(n.hot?' · 🔥'+n.hot:'')+'</div>':'')+'</div>'+
+      (n.hot&&!open?'<div class="hot">🔥'+n.hot+'</div>':'')+
+      (isRead?'<div class="rd">✓</div>':'')+'</div>';}).join('');
   h+='</div>';return h;}
-function newsRestoreIcon(){const all=(DB.news&&DB.news.length?DB.news:FALLBACK_NEWS);return (all.length&&all.every(n=>DB.news_read.includes(n.id))&&!DB.news_showRead)?'<button class="hiadd" onclick="toggleNewsShow()" title="恢复已读">↺</button>':'';}
-function toggleNews(id){DB._openNews=(DB._openNews===id?null:id);if(DB._openNews===id){if(!DB.news_read.includes(id)){DB.news_read.push(id);save();}}renderHome();}
-function toggleNewsShow(){DB.news_showRead=!DB.news_showRead;save();renderHome();}
+function newsRestoreIcon(){return DB.news_collapsed?'<button class="hiadd" onclick="toggleNewsShow()" title="恢复已读">↺</button>':'';}
+function toggleNews(id){const all=(DB.news&&DB.news.length?DB.news:FALLBACK_NEWS);
+  const opening=DB._openNews!==id;
+  DB._openNews=opening?id:null;
+  if(opening&&!DB.news_read.includes(id))DB.news_read.push(id);
+  if(all.length&&all.every(n=>DB.news_read.includes(n.id))&&!opening)DB.news_collapsed=true;
+  save();renderHome();}
+function toggleNewsShow(){DB.news_collapsed=!DB.news_collapsed;save();renderHome();}
 function loadNews(){if(!DB.net){DB.news=[];save();return;}fetch('https://api.vvhan.com/api/hotlist/wbHot').then(r=>r.json()).then(j=>{const it=(j.data||[]).slice(0,5).map((d,i)=>({id:'n'+i,title:d.title,hot:d.hot||'',summary:''}));if(it.length){DB.news=it;save();}}).catch(()=>{}).finally(()=>{});}
 /* 核心卡 */
 function coreCards(){
