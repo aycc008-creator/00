@@ -21,7 +21,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
 body{
-  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-family:"Yuanti SC","PingFang SC",ui-rounded,-apple-system,BlinkMacSystemFont,"Hiragino Sans GB","Microsoft YaHei",sans-serif;
   background:var(--bg); color:var(--ink); line-height:1.55;
   -webkit-font-smoothing:antialiased; overscroll-behavior:none;
 }
@@ -39,14 +39,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   background:linear-gradient(150deg,#C9A8C4,#B7A6C9);box-shadow:0 8px 24px rgba(120,90,130,.4)}
 .slogan{margin-top:18px;color:#fff;font-size:16px;letter-spacing:3px;opacity:.95;text-shadow:0 1px 6px rgba(0,0,0,.25)}
 .lockhint{margin-top:26px;color:#fff;font-size:13px;opacity:.85;min-height:18px}
-.pindots{display:flex;gap:16px;margin:14px 0 22px}
-.pindots span{width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,255,255,.85);background:transparent;transition:.2s}
+.pindots{display:flex;gap:14px;margin:12px 0 18px}
+.pindots span{width:10px;height:10px;border-radius:50%;border:2px solid rgba(255,255,255,.85);background:transparent;transition:.2s}
 .pindots span.on{background:#fff;border-color:#fff;box-shadow:0 0 10px rgba(255,255,255,.7)}
-.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:248px;max-width:80vw}
-.keypad button{height:58px;border-radius:18px;font-size:23px;color:#fff;background:rgba(255,255,255,.16);
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;width:232px;max-width:78vw}
+.keypad button{height:50px;border-radius:16px;font-size:19px;color:#fff;background:rgba(255,255,255,.16);
   backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.22);transition:.12s;font-weight:500}
 .keypad button:active{transform:scale(.94);background:rgba(255,255,255,.30)}
-.keypad .del{font-size:20px}
+.keypad .del{font-size:17px}
 .shake{animation:shk .4s}@keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-9px)}75%{transform:translateX(9px)}}
 /* ===== 应用壳 ===== */
 #app{display:flex;flex-direction:column;height:100%;max-width:520px;margin:0 auto;background:var(--bg)}
@@ -72,10 +72,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .datebox .wt{font-size:15px;color:var(--ink);font-weight:500}
 .datebox .wt .ti{font-size:18px;margin-right:3px}
 /* 日箴 */
-.quote{font-style:italic;font-family:"Songti SC","Noto Serif SC",Georgia,serif;font-size:16px;color:#7A7068;line-height:1.7}
-.quote .src{display:block;margin-top:8px;font-style:normal;font-size:12px;color:var(--ink2);text-align:right}
-.quotebar{display:flex;gap:8px;margin-top:12px}
-.quotebar button{flex:1;font-size:12.5px;padding:8px 0;border-radius:12px;background:var(--card2);color:var(--ink2)}
+.quote{font-style:italic;font-family:"Songti SC","Noto Serif SC",Georgia,serif;font-size:14px;color:#7A7068;line-height:1.7}
+.quote .src{display:block;margin-top:6px;font-style:normal;font-size:11px;color:var(--ink2);text-align:right}
+.quotebar{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+.quotebar button.qico{width:30px;height:30px;font-size:15px;padding:0;border-radius:50%;background:var(--card2);color:var(--ink2);display:flex;align-items:center;justify-content:center;transition:.12s}
+.quotebar button.qico:active{transform:scale(.9)}
 .quotebar button.fav{color:var(--pink2)}
 /* 知讯 */
 .news{display:flex;flex-direction:column;gap:2px}
@@ -395,7 +396,7 @@ function drawChina(canvas,opts){
 <script>
 /* ============ 基础 ============ */
 const LS_KEY='lynn_v1';
-const DEF={pinHash:null,net:false,city:{name:'香港',lat:22.3193,lng:114.1694},todos:[],ledger:[],diet:[],sleep:[],study:[],travel:[],period:[],countdown:[],mood:[],quotes_fav:[],news:[],news_read:[],weather:null,sleepGoal:8,studyGoal:null};
+const DEF={pinHash:null,net:false,city:{name:'香港',lat:22.3193,lng:114.1694},todos:[],ledger:[],diet:[],sleep:[],study:[],travel:[],period:[],periodCycle:28,periodLen:5,countdown:[],mood:[],quotes_fav:[],news:[],news_read:[],weather:null,sleepGoal:8,studyGoal:null};
 let DB=Object.assign({},DEF,JSON.parse(localStorage.getItem(LS_KEY)||'{}'));
 function save(){localStorage.setItem(LS_KEY,JSON.stringify(DB));}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
@@ -449,7 +450,9 @@ function showLock(){
 }
 function renderLock(){
   const setup=lockMode.startsWith('set');
+  const photo=DB.net?('<img id="lockimg" src="https://picsum.photos/seed/'+(Math.floor(Math.random()*9999))+'/900/1600" onerror="this.style.display=\'none\'">'):'';
   $('#lock').innerHTML=
+    photo+
     '<div class="lockinner">'+
       '<div class="appicon">00</div>'+
       '<div class="slogan">静谧之地，凭密入内</div>'+
@@ -529,8 +532,8 @@ function renderHome(){curViewFn=null;
 function greet(){const h=new Date().getHours();if(h<6)return'晚上好';if(h<12)return'早上好';if(h<14)return'中午好';if(h<18)return'下午好';return'晚上好';}
 function card(t,more,body){return '<div class="card"><h3>'+t+(more?'<span class="more" onclick="'+moreClick(more)+'">'+more+'</span>':'')+'</h3>'+body+'</div>';}
 function moreClick(m){if(m==='查看看板')return "openModule('待办事项',todoView,bindTodo)";return '';}
-function quoteHtml(){return '<div class="quote" id="qtext"></div><div class="quotebar"><button onclick="refreshQuote()">↻ 换一句</button><button class="fav" id="favbtn" onclick="favQuote()">♡ 收藏</button></div>';}
-function paintQuote(){$('#qtext').innerHTML=curQuote.c+'<span class="src">'+curQuote.e+'</span>';const fav=DB.quotes_fav.some(q=>q.c===curQuote.c);const b=$('#favbtn');if(b){b.innerHTML=(fav?'♥ 已藏':'♡ 收藏');b.classList.toggle('fav',fav);}}
+function quoteHtml(){return '<div class="quote" id="qtext"></div><div class="quotebar"><button class="qico" onclick="refreshQuote()" title="换一句">↻</button><button class="qico fav" id="favbtn" onclick="favQuote()" title="收藏">♡</button></div>';}
+function paintQuote(){$('#qtext').innerHTML=curQuote.c+'<span class="src">'+curQuote.e+'</span>';const fav=DB.quotes_fav.some(q=>q.c===curQuote.c);const b=$('#favbtn');if(b){b.innerHTML=(fav?'♥':'♡');b.classList.toggle('fav',fav);}}
 function refreshQuote(){curQuote=QUOTES[Math.floor(Math.random()*QUOTES.length)];paintQuote();}
 function favQuote(){const i=DB.quotes_fav.findIndex(q=>q.c===curQuote.c);if(i>=0){DB.quotes_fav.splice(i,1);toast('已取消收藏');}else{DB.quotes_fav.push(curQuote);toast('已收藏');}save();paintQuote();}
 /* 知讯 */
@@ -772,15 +775,20 @@ function periodView(){const y=new Date().getFullYear(),m=new Date().getMonth();c
     h+='<div class="cd'+(ds===todayStr()?' today':'')+(on?' hm':'')+'" onclick="togglePeriod(\''+ds+'\')">'+d+(on?'<span class="dn">🌸</span>':'')+'</div>';}
   h+='</div>';
   const pd=predictPeriod();
-  return card('🌸 经期','',
+  const cyc=DB.periodCycle||28,plen=DB.periodLen||5;
+  return card('🌸 经期 · 周期记录','',
+    '<div class="statline"><span>周期长度</span><span class="v">'+cyc+' 天 · <span style="color:var(--accent)" onclick="setPeriodCycle()">调整</span></span></div>'+
+    '<div class="statline"><span>经期长度</span><span class="v">'+plen+' 天 · <span style="color:var(--accent)" onclick="setPeriodLen()">调整</span></span></div>'+
     '<div class="statline"><span>本期已标记</span><span class="v">'+DB.period.filter(p=>p.date.slice(0,7)===y+'-'+String(m+1).padStart(2,'0')).length+' 天</span></div>'+
-    '<div class="statline"><span>预计下次</span><span class="v">'+(pd?(pd.days<0?'已过 '+Math.abs(pd.days)+' 天':pd.days===0?'今天':pd.days+' 天后'):'数据不足')+'</span></div>'+
+    '<div class="statline"><span>预计下次</span><span class="v">'+(pd?(pd.days<0?('已过 '+Math.abs(pd.days)+' 天'):pd.days===0?'就是今天':pd.days+' 天后')+'（'+pd.next+'）':'数据不足，先标记几天')+'</span></div>'+
     '<div style="font-size:12px;color:var(--ink2);margin:10px 2px">点击日期标记 / 取消经期</div>'+h)+'';
 }
+function setPeriodCycle(){const v=prompt('周期长度（天，默认 28）',DB.periodCycle||28);if(v&&+v>0){DB.periodCycle=+v;save();renderBack();toast('已设为 '+v+' 天');}}
+function setPeriodLen(){const v=prompt('经期长度（天，默认 5）',DB.periodLen||5);if(v&&+v>0){DB.periodLen=+v;save();renderBack();toast('已设为 '+v+' 天');}}
 function bindPeriod(){}
 function togglePeriod(ds){const i=DB.period.findIndex(p=>p.date===ds);if(i>=0)DB.period.splice(i,1);else DB.period.push({id:uid(),date:ds});save();renderBack();}
-function predictPeriod(){if(DB.period.length<2)return null;const ds=DB.period.map(p=>p.date).sort();const gaps=[];for(let i=1;i<ds.length;i++)gaps.push(daysBetween(ds[i-1],ds[i]));const avg=Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length);const last=ds[ds.length-1];const next=new Date(last+'T00:00');next.setDate(next.getDate()+avg);const nd=todayStr(next);
-  return {days:daysBetween(todayStr(),nd),avg};}
+function periodStarts(){const ds=DB.period.map(p=>p.date).sort();if(!ds.length)return[];const starts=[];let prev=null;ds.forEach(d=>{if(!prev||daysBetween(prev,d)>3)starts.push(d);prev=d;});return starts;}
+function predictPeriod(){const starts=periodStarts();if(!starts.length)return null;const cyc=DB.periodCycle||28;const last=starts[starts.length-1];const next=new Date(last+'T00:00');next.setDate(next.getDate()+cyc);const nd=todayStr(next);return {days:daysBetween(todayStr(),nd),avg:cyc,next:nd};}
 
 /* 倒数 */
 function countdownView(){const list=DB.countdown.map(c=>({c,d:daysBetween(todayStr(),c.date)})).sort((a,b)=>a.d-b.d);
@@ -799,17 +807,57 @@ function editCountdown(id){const c=DB.countdown.find(x=>x.id===id);if(!c)return;
 ],{},v=>{Object.assign(c,v);save();renderBack();toast('已保存');},()=>{DB.countdown=DB.countdown.filter(x=>x.id!==id);save();renderBack();toast('已删除');});}
 
 /* 旅途（地图） */
-function travelView(){const lit=new Set(DB.travel.map(t=>t.prov).filter(Boolean));
-  return '<div class="card" style="margin-bottom:12px"><h3>🗺️ 旅途 · 点击地图标点</h3>'+
-    '<div class="mapbar"><button id="pickBtn" onclick="togglePick()">📍 在地图标点</button><button onclick="resetMapView()">↺ 全国</button></div>'+
-    '<div class="maphint" id="mapHint">滚轮 / 双指缩放 · 拖拽平移 · 点省放大</div>'+
-    '<canvas id="mapCanvas"></canvas></div>'+
+function travelView(){const online=DB.net;
+  const mapHtml=online
+    ? '<div id="leafmap" style="height:46vh;min-height:300px;border-radius:var(--radius);background:var(--card2)"></div>'
+    : '<canvas id="mapCanvas"></canvas>';
+  return '<div class="card" style="margin-bottom:12px"><h3>🗺️ 旅途'+(online?' · 联网地图':' · 离线地图')+'</h3>'+
+    '<div class="mapbar">'+
+      '<button onclick="travelAddPlace()">➕ 添加地点/景点</button>'+
+      (online?'<button onclick="travelGeoMe()">📍 我的位置</button>':'<button onclick="startTravelPick()">📍 地图标点</button>')+
+    '</div>'+
+    '<div class="maphint" id="mapHint">'+(online?'联网真实地图 · 带具体地名的标记 · 点标记查看':'滚轮/双指缩放 · 拖拽平移 · 点省放大')+'</div>'+
+    mapHtml+'</div>'+
     card('✈️ 足迹','',DB.travel.length?('<div class="list">'+DB.travel.slice().reverse().map(t=>'<div class="item" onclick="editTravel(\''+t.id+'\')">'+(t.photo?'<img class="thumb" src="'+t.photo+'">':'<div class="thumb" style="display:flex;align-items:center;justify-content:center">📍</div>')+'<div class="main"><div class="t">'+esc(t.place||'足迹')+'</div><div class="s">'+(t.prov||'')+' · '+(t.date||'')+'</div></div></div>').join('')+'</div>'):'<div class="empty">添加你的第一个足迹</div>')+
-    '<button class="fab" onclick="startTravelPick()">+</button>';
+    '<button class="fab" onclick="travelAddPlace()">+</button>';
 }
 function bindTravel(){const lit=new Set(DB.travel.map(t=>t.prov).filter(Boolean));
-  drawChina($('#mapCanvas'),{lit:lit,useView:true,pins:DB.travel.filter(r=>r.lat&&r.lng).map(r=>({id:r.id,lng:+r.lng,lat:+r.lat,name:r.place})),
+  const pins=DB.travel.filter(r=>r.lat&&r.lng).map(r=>({id:r.id,lng:+r.lng,lat:+r.lat,name:r.place}));
+  if(DB.net){ensureLeaflet(()=>renderLeaf(pins));}
+  else{drawChina($('#mapCanvas'),{lit:lit,useView:true,pins:pins,
     onProv:n=>zoomToProv(n),onPin:id=>editTravel(id),onPick:(lng,lat)=>{const prov=pickProvFromLngLat(lng,lat);openTravelForm(lng,lat,prov);},onBlank:()=>{}});}
+}
+let _leafLoading=false,_leafReady=false;
+function ensureLeaflet(cb){if(window.L&&window.L.map){cb();return;}if(_leafReady){cb();return;}
+  if(_leafLoading){const t=setInterval(()=>{if(window.L){clearInterval(t);cb();}},200);return;}
+  _leafLoading=true;
+  const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(css);
+  const s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  s.onload=()=>{_leafReady=true;cb();};s.onerror=()=>{toast('地图加载失败，请检查联网');};
+  document.head.appendChild(s);
+}
+function renderLeaf(pins){const el=$('#leafmap');if(!el||!window.L)return;
+  const map=L.map(el,{scrollWheelZoom:true}).setView([30,110],4);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(map);
+  pins.forEach(p=>{if(p.lat&&p.lng){const mk=L.marker([+p.lat,+p.lng]).addTo(map);mk.bindTooltip(p.name||'足迹',{direction:'top'});mk.on('click',()=>editTravel(p.id));}});
+  const pts=pins.filter(p=>p.lat&&p.lng);if(pts.length){const b=L.latLngBounds(pts.map(p=>[+p.lat,+p.lng]));if(b.isValid())map.fitBounds(b,{padding:[40,40],maxZoom:8});}
+  setTimeout(()=>map.invalidateSize(),300);
+}
+function provFromName(dn){if(!dn)return'';for(const d of CHINA){if(dn.indexOf(d.n)>=0)return d.n;}return'';}
+function geocodePlace(q,cb){fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q='+encodeURIComponent(q)).then(r=>r.json()).then(j=>{if(j&&j.length){const r=j[0];cb({lat:+r.lat,lng:+r.lon,prov:provFromName(r.display_name),addr:r.display_name});}else cb(null);}).catch(()=>cb(null));}
+function travelAddPlace(){openModal('<div class="sheet"><h3>添加地点 / 景点 <span class="x" onclick="closeModal()">×</span></h3>'+
+  '<div class="fld"><label>地点或景点名称</label><input id="tpName" placeholder="如：西湖、东京塔、旺角"></div>'+
+  (DB.net?'':'<div class="fld"><label>省份（离线模式请手动填）</label><input id="tpProv" placeholder="如：浙江"></div>')+
+  '<div class="fld"><label>日期</label><input id="tpDate" type="date" value="'+todayStr()+'"></div>'+
+  '<div class="fld"><label>备注</label><input id="tpNote" placeholder="随想"></div>'+
+  '<button class="btn block" style="margin-top:10px" onclick="travelAddSubmit()">添加</button></div>');}
+function travelAddSubmit(){const name=$('#tpName').value.trim();if(!name){toast('请填写名称');return;}
+  const date=$('#tpDate').value||todayStr(),note=$('#tpNote').value.trim();
+  const done=(lat,lng,prov)=>{DB.travel.push({id:uid(),place:name,prov:prov||'',lat:lat,lng:lng,date:date,note:note,photo:''});save();closeModal();renderBack();toast('已添加到地图');};
+  if(DB.net){closeModal();toast('正在定位…');geocodePlace(name,g=>{if(g)done(g.lat,g.lng,g.prov);else{done('','','');toast('未找到，已按名称记录');}});}
+  else{const prov=$('#tpProv')?$('#tpProv').value.trim():'';done('','',prov);}
+}
+function travelGeoMe(){if(!navigator.geolocation){toast('设备不支持定位');return;}toast('正在获取位置…');navigator.geolocation.getCurrentPosition(p=>{const lat=p.coords.latitude,lng=p.coords.longitude;DB.travel.push({id:uid(),place:'我的位置',prov:provFromName(''),lat:lat,lng:lng,date:todayStr(),note:'',photo:''});save();renderBack();toast('已标记当前位置');},()=>toast('定位失败'),{enableHighAccuracy:false,timeout:8000});}
 function togglePick(){mapPickMode=!mapPickMode;refreshPickBtn();redrawMap();}
 function resetMapView(){resetMap();}
 function startTravelPick(){mapPickMode=true;refreshPickBtn();toast('在地图上点选打卡位置');}
