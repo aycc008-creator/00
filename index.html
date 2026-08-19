@@ -218,22 +218,22 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .gallery .g img{width:100%;height:100%;object-fit:cover}
 .gallery .g .cap{position:absolute;left:0;right:0;bottom:0;font-size:10px;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.5));padding:10px 6px 5px}
 /* 饮食记录：按日期分组 + 早午晚加餐 */
-.day{background:#fff;border-radius:18px;padding:12px 13px 6px;margin-bottom:12px;box-shadow:0 8px 22px rgba(110,135,155,.10);border:1px solid rgba(255,255,255,.9)}
-.daytop{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
-.daytop .dt{font-size:15px;font-weight:700;color:var(--ink)}
-.daytop .wk{font-size:12px;color:var(--ink2)}
-.daytop .cnt{margin-left:auto;font-size:11px;color:var(--ink2);background:var(--card2);padding:2px 8px;border-radius:10px}
-.meal{display:flex;gap:10px;padding:7px 0;border-top:1px dashed var(--line)}
-.meal:first-of-type{border-top:none}
-.chip{flex:0 0 auto;width:34px;height:22px;border-radius:11px;font-size:11px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;margin-top:2px}
-.c-break{background:var(--milk)} .c-lunch{background:var(--blue)} .c-dinner{background:var(--purple)} .c-snack{background:var(--pink)}
-.mitems{flex:1;min-width:0}
-.mi{display:flex;align-items:center;gap:8px;padding:3px 0}
-.mi img{width:38px;height:38px;border-radius:10px;object-fit:cover;flex:0 0 auto;background:var(--card2)}
-.mi .ph{width:38px;height:38px;border-radius:10px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto}
-.mi .txt{flex:1;min-width:0}
-.mi .desc{font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mi .flag{font-size:13px}
+.dday{background:#fff;border-radius:18px;padding:12px 13px 6px;margin-bottom:12px;box-shadow:0 8px 22px rgba(110,135,155,.10);border:1px solid rgba(255,255,255,.9)}
+.dtop{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}
+.dtop .ddate{font-size:15px;font-weight:700;color:var(--ink)}
+.dtop .dwk{font-size:12px;color:var(--ink2)}
+.dtop .dcnt{margin-left:auto;font-size:11px;color:var(--ink2);background:var(--card2);padding:2px 8px;border-radius:10px}
+.dmeal{display:flex;gap:10px;padding:7px 0;border-top:1px dashed var(--line)}
+.dtop+.dmeal{border-top:none}
+.dmk{flex:0 0 auto;width:34px;height:22px;border-radius:11px;font-size:11px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.mk-break{background:var(--milk)} .mk-lunch{background:var(--blue)} .mk-dinner{background:var(--purple)} .mk-snack{background:var(--pink)}
+.ditems{flex:1;min-width:0}
+.ditem{display:flex;align-items:center;gap:8px;padding:3px 0}
+.ditem img{width:38px;height:38px;border-radius:10px;object-fit:cover;flex:0 0 auto;background:var(--card2)}
+.ditem .dph{width:38px;height:38px;border-radius:10px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto}
+.ditem .dtxt{flex:1;min-width:0}
+.ditem .ddesc{font-size:13px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ditem .dflag{font-size:13px}
 .list{display:flex;flex-direction:column;gap:9px}
 .item{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;display:flex;gap:10px;align-items:center}
 .item .main{flex:1;min-width:0}
@@ -937,17 +937,17 @@ function bindLedgerAll(){if(!DB.ledger.length){$('#ledgerall').innerHTML='<div c
 }
 
 /* 饮食 */
-function dietView(){const meals=['早餐','午餐','晚餐','加餐'];const mcls={'早餐':'c-break','午餐':'c-lunch','晚餐':'c-dinner','加餐':'c-snack'};
+function dietView(){const meals=['早餐','午餐','晚餐','加餐'];const mcls={'早餐':'mk-break','午餐':'mk-lunch','晚餐':'mk-dinner','加餐':'mk-snack'};
   const byDate={};DB.diet.forEach(d=>{const k=d.date||'未注明';(byDate[k]=byDate[k]||[]).push(d);});
   const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
   let body='';
   if(!dates.length){body='<div class="empty">还没有饮食记录 🍽️<br>点右上角 ＋ 记录第一餐</div>';}
   else{body=dates.map(dt=>{const items=byDate[dt];const w=['日','一','二','三','四','五','六'][new Date(dt+'T00:00:00').getDay()];
     const mealHtml=meals.map(m=>{const ms=items.filter(x=>x.meal===m);if(!ms.length)return '';
-      return '<div class="meal"><span class="chip '+mcls[m]+'">'+m+'</span><div class="mitems">'+ms.map(d=>
-        '<div class="mi" onclick="editDiet(\''+d.id+'\')">'+(d.photo?'<img src="'+d.photo+'">':'<div class="ph">🍽️</div>')+
-        '<div class="txt"><div class="desc">'+esc(d.desc||d.meal)+'</div></div>'+(d.photo?'<span class="flag">📷</span>':'')+'</div>').join('')+'</div>';}).join('');
-    return '<div class="day"><div class="daytop"><span class="dt">'+fmtMD(dt)+'</span><span class="wk">'+w+'</span><span class="cnt">'+items.length+' 餐</span></div>'+mealHtml+'</div>';}).join('');}
+      return '<div class="dmeal"><span class="dmk '+mcls[m]+'">'+m+'</span><div class="ditems">'+ms.map(d=>
+        '<div class="ditem" onclick="editDiet(\''+d.id+'\')">'+(d.photo?'<img src="'+d.photo+'">':'<div class="dph">🍽️</div>')+
+        '<div class="dtxt"><div class="ddesc">'+esc(d.desc||d.meal)+'</div></div>'+(d.photo?'<span class="dflag">📷</span>':'')+'</div>').join('')+'</div>';}).join('');
+    return '<div class="dday"><div class="dtop"><span class="ddate">'+fmtMD(dt)+'</span><span class="dwk">'+w+'</span><span class="dcnt">'+items.length+' 餐</span></div>'+mealHtml+'</div>';}).join('');}
   return card('🍽️ 饮食记录','',body,'<button class="hiadd" onclick="addDiet()">＋</button>');}
 function bindDiet(){}
 function addDiet(){const meals=['早餐','午餐','晚餐','加餐'];
