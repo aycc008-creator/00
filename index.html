@@ -312,6 +312,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .ledfi .r1 .own.per{background:#C9A8A4} .ledfi .r1 .own.fam{background:#A9BFC9}
 .ledfi .r1 .dt{font-size:12px;color:var(--ink2);font-weight:500}
 .ledfi .r2{font-size:11.5px;color:var(--ink2);margin-top:3px}
+/* 睡眠/学习手动记录 */
+.timer .btns .soft{background:var(--card2);color:var(--accent);border:1px dashed rgba(127,168,201,.55);padding:10px 14px}
+/* 心情 */
+.moodhint{font-size:11px;color:var(--ink2);text-align:center;margin-top:8px}
+.mrow{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink);line-height:1.5}
+.dtop+.mrow{border-top:none}
+.mtime2{flex:none;font-size:10.5px;color:var(--accent);background:var(--card2);padding:1px 7px;border-radius:8px;margin-top:1px}
+.mdel{flex:none;font-size:11px;color:#C99A9A;background:#F6EAEA;padding:2px 8px;border-radius:8px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -518,6 +526,9 @@ const LS_KEY='lynn_v1';
 const DEF={pinHash:null,net:false,city:{name:'香港',lat:22.3193,lng:114.1694},todos:[],ledger:[],diet:[],sleep:[],study:[],travel:[],period:[],periodCycle:28,periodLen:5,periodMonths:3,countdown:[],mood:[],quotes_fav:[],news:[],news_read:[],news_collapsed:false,weather:null,sleepGoal:8,studyGoal:null};
 let DB=Object.assign({},DEF,JSON.parse(localStorage.getItem(LS_KEY)||'{}'));
 function save(){localStorage.setItem(LS_KEY,JSON.stringify(DB));}
+/* 睡眠时长迁移：旧版存小时小数（如 7.5），统一转为分钟整数（450） */
+function migrateSleep(){DB.sleep.forEach(s=>{if(s.dur&&+s.dur>0&&+s.dur<=24){s.dur=Math.round(+s.dur*60);}});}
+migrateSleep();
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function $(s){return document.querySelector(s);}
 function todayStr(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -647,14 +658,15 @@ function renderHome(){curViewFn=null;
     card('✅ 待办事项','查看看板', todoHomeHtml())+
     '<div class="sec-title">速览</div>'+
     '<div class="grid">'+cd.map(coreCardHtml).join('')+'</div>'+
-    card('🌤️ 心情记录','',moodHtml())+
+    card('🌤️ 心情记录','查看',moodHtml())+
     card('✈️ 旅游打卡','',travelHomeHtml())+
     '</div>';
   loadWeather();loadNews();paintQuote();
 }
 function greet(){const h=new Date().getHours();if(h<6)return'晚上好';if(h<12)return'早上好';if(h<14)return'中午好';if(h<18)return'下午好';return'晚上好';}
 function card(t,more,body,rbtn){return '<div class="card"><h3>'+t+(more?'<span class="more" onclick="'+moreClick(more)+'">'+more+'</span>':'')+(rbtn?'<span style="margin-left:auto">'+rbtn+'</span>':'')+'</h3>'+body+'</div>';}
-function moreClick(m){if(m==='查看看板')return "openModule('待办事项',todoView,bindTodo)";return '';}
+function moreClick(m){if(m==='查看看板')return "openModule('待办事项',todoView,bindTodo)";if(m==='查看')return "openModule('心情记录',moodView,bindMood)";return '';}
+function fmtSleepDur(v){let m=+v||0;if(m>0&&m<=24)m=Math.round(m*60);m=Math.round(m);const h=Math.floor(m/60),mm=m%60;return h?(h+'h '+(mm?mm+'min':'')):(m?mm+'min':'—');}
 function quoteHtml(){return '<div class="quote" id="qtext"></div>';}
 function quoteIcons(){return '<button class="qico" onclick="refreshQuote()" title="换一句">↻</button><button class="qico fav" id="favbtn" onclick="favQuote()" title="收藏">♡</button>';}
 function paintQuote(){$('#qtext').innerHTML=curQuote.c+'<span class="src">'+curQuote.e+'</span>';const fav=DB.quotes_fav.some(q=>q.c===curQuote.c);const b=$('#favbtn');if(b){b.innerHTML=(fav?'♥':'♡');b.classList.toggle('fav',fav);}}
@@ -710,22 +722,33 @@ function coreCards(){
   if(lastD){di.v=(lastD.desc&&lastD.desc.trim())?lastD.desc.trim().slice(0,18):(lastD.meal||'最近一餐');di.s=(lastD.meal||'最近一餐')+(lastD.photo?' 📷':'');}else{di.v='记录一餐';di.s='今日饮食';}
   let sl={icon:'🌙',t:'睡眠',bg:'gc-blue',click:"openModule('睡眠',sleepView,bindSleep)"};
   const lastS=[...DB.sleep].reverse().find(s=>s.dur);
-  if(lastS){const dur=parseFloat(lastS.dur)||0;const h=Math.floor(dur);const m=Math.round((dur-h)*60);
-    sl.v=h+'h '+(m>0?m+'min':'');sl.s=(lastS.q?'质量 '+lastS.q:'最近一晚');}
+  if(lastS){sl.v=fmtSleepDur(lastS.dur);sl.s=(lastS.note&&lastS.note.trim())?lastS.note.trim().slice(0,10):'昨晚睡眠';}
   else{sl.v='未记录';sl.s='昨晚睡眠';}
   let st={icon:'📚',t:'学习',bg:'gc-cream',click:"openModule('学习',studyView,bindStudy)"};
   const todays=DB.study.filter(s=>s.date===t).reduce((s2,x)=>s2+(+x.dur||0),0);
-  if(todays){const hm=Math.round(todays);st.v=(hm>=60?Math.floor(hm/60)+'h':'0h');st.s='今日累计';}else{st.v='0h';st.s='今日累计';}
+  if(todays){const hm=Math.round(todays);st.v=(hm>=60?Math.floor(hm/60)+'h '+(hm%60?hm%60+'min':''):hm+'min');st.s='今日累计';}else{st.v='0min';st.s='今日累计';}
   return [cd,pe,lg,di,sl,st];
 }
 function coreCardHtml(c){const body=c.body?c.body:'<div class="gv">'+(c.v||'—')+'</div>'+(c.s?'<div class="gs">'+c.s+'</div>':'');return '<div class="gcard" onclick="'+c.click+'"><div class="gi '+(c.bg||'gc-cream')+'">'+c.icon+'</div><div class="gt">'+c.t+'</div>'+body+'</div>';}
 function afterHomeTrends(){coreCards().forEach(c=>{if(c.trend){const cv=$('#tr_'+c.t);if(cv)miniTrend(cv,c.trend);}});}
 /* 心情 */
-function moodHtml(){const list=[...DB.mood].reverse().slice(0,3);
+function moodHtml(){const n=DB.mood.length;
   return '<div class="moodrow"><textarea id="moodIn" placeholder="此刻的心情…"></textarea><button class="btn" onclick="addMood()">记录</button></div>'+
-    (list.length?'<div class="moodlist">'+list.map(m=>'<div class="m"><span>'+esc(m.text)+'</span><span class="d">'+fmtMD(m.date)+'</span></div>').join('')+'</div>':'');
+    (n?'<div class="moodhint">已记录 '+n+' 条 · <b style="color:var(--accent)" onclick="openModule(\'心情记录\',moodView,bindMood)">查看 ›</b></div>':'<div class="moodhint">还没有记录，写下一句吧 🌿</div>');
 }
-function addMood(){const v=$('#moodIn').value.trim();if(!v){toast('写点什么吧');return;}DB.mood.push({id:uid(),date:todayStr(),text:v});save();renderHome();}
+function addMood(){const v=$('#moodIn').value.trim();if(!v){toast('写点什么吧');return;}DB.mood.push({id:uid(),date:todayStr(),time:new Date().toTimeString().slice(0,5),text:v});save();renderHome();}
+function moodView(){const byDate={};DB.mood.forEach(m=>{(byDate[m.date]=byDate[m.date]||[]).push(m);});
+  const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  let body=dates.map(dt=>{const ms=byDate[dt];const w=['日','一','二','三','四','五','六'][new Date(dt+'T00:00:00').getDay()];
+    return '<div class="dday"><div class="dtop"><span class="ddate">'+fmtMD(dt)+'</span><span class="dwk">周'+w+'</span><span class="dcnt">'+ms.length+' 条</span></div>'+
+      ms.map(m=>'<div class="mrow"><span class="mtime2">'+(m.time||'--')+'</span><span style="flex:1">'+esc(m.text)+'</span><span class="mdel" onclick="delMood(\''+m.id+'\')">删除</span></div>').join('')+'</div>';}).join('');
+  return card('🌤️ 心情记录','',
+    '<div class="moodrow" style="margin-bottom:10px"><textarea id="moodIn2" placeholder="此刻的心情…"></textarea><button class="btn" onclick="addMood2()">记录</button></div>'+
+    (body||'<div class="empty">还没有心情记录 🍂</div>'))+'';
+}
+function bindMood(){}
+function addMood2(){const v=$('#moodIn2').value.trim();if(!v){toast('写点什么吧');return;}DB.mood.push({id:uid(),date:todayStr(),time:new Date().toTimeString().slice(0,5),text:v});save();renderBack();toast('已记录');}
+function delMood(id){DB.mood=DB.mood.filter(m=>m.id!==id);save();renderBack();toast('已删除');}
 /* 旅行首页 */
 function travelHomeHtml(){const last=[...DB.travel].reverse()[0];
   if(last)return '<div class="trav" onclick="openModule(\'旅途\',travelView,bindTravel)"><div class="thumb">'+(last.photo?'<img src="'+last.photo+'" style="width:100%;height:100%">':'📍')+'</div><div class="info"><div class="p">'+(last.place||'足迹')+'</div><div class="s">'+(last.prov||'')+' · '+(last.date||'')+'</div></div></div>';
@@ -767,10 +790,10 @@ function branchDash(k){const m=MODULES.find(x=>x.k===k);if(!m)return '';
     flow=flowList(list.map(d=>'<div class="item"><div class="main"><div class="t">'+esc(d.meal||'餐')+(d.desc?(' · '+esc(d.desc.slice(0,22))):'')+'</div><div class="s">'+fmtMD(d.date)+'</div></div></div>').join(''));
     addFn='addDiet()';}
   else if(k==='sleep'){const cur=DB.sleep.filter(s=>s.date&&s.date.slice(0,7)===ym&&s.dur);
-    const avg=cur.length?cur.reduce((s,x)=>s+(+x.dur||0),0)/cur.length:0;const ok=cur.filter(s=>(+s.dur||0)>=DB.sleepGoal).length;
+    const avg=cur.length?cur.reduce((s,x)=>s+(+x.dur||0),0)/cur.length/60:0;const ok=cur.filter(s=>(+s.dur||0)>=DB.sleepGoal*60).length;
     sum=sumCards([['本月均睡',avg?avg.toFixed(1)+'h':'—','#AEBFC9'],['达标天数',ok+' 天','#B7C7B4'],['记录',cur.length+' 晚','#C7BAD2']]);
     const list=[...DB.sleep].filter(s=>s.dur).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
-    flow=flowList(list.map(s=>'<div class="item"><div class="main"><div class="t">'+(+s.dur).toFixed(1)+' 小时'+(s.quality?(' · '+s.quality+'分'):'')+'</div><div class="s">'+(s.start||'')+'~'+(s.end||'')+' · '+fmtMD(s.date)+'</div></div></div>').join(''));
+    flow=flowList(list.map(s=>'<div class="item"><div class="main"><div class="t">'+fmtSleepDur(s.dur)+(s.note&&s.note.trim()?(' · '+esc(s.note.trim().slice(0,8))):'')+'</div><div class="s">'+(s.bed||'--')+'→'+(s.wake||'--')+' · '+fmtMD(s.date)+'</div></div></div>').join(''));
     addFn='openModule(\'睡眠\',sleepView,bindSleep)';}
   else if(k==='study'){const cur=DB.study.filter(s=>s.date&&s.date.slice(0,7)===ym&&s.dur);
     const tot=cur.reduce((s,x)=>s+(+x.dur||0),0);
@@ -969,31 +992,57 @@ function editDiet(id){const d=DB.diet.find(x=>x.id===id);if(!d)return;const meal
 let sleepTimer=null,sleepStart=0;
 function sleepView(){const last=[...DB.sleep].reverse()[0];
   return card('🌙 睡眠','',
-    '<div class="timer"><div class="big" id="sleepBig">00:00</div>'+
-    '<div class="btns"><button class="go" id="sleepBtn" onclick="sleepToggle()">开始睡眠</button></div>'+
+    '<div class="timer"><div class="big" id="sleepBig">00:00:00</div>'+
+    '<div class="btns"><button class="go" id="sleepBtn" onclick="sleepToggle()">开始睡眠</button>'+
+    '<button class="soft" onclick="manualSleep()">＋ 手动记录</button></div>'+
     '<div class="pomo">睡眠目标：'+DB.sleepGoal+' 小时 · <span style="color:var(--accent)" onclick="setSleepGoal()">修改</span></div></div>'+
     '<div class="card" style="margin-top:12px;box-shadow:none;background:var(--card2)"><h3 style="font-size:13px">最近记录</h3><div id="sleeplist"></div></div>')+
     '';
 }
 function bindSleep(){renderSleepList();if(sleepTimer){$('#sleepBtn').textContent='结束睡眠';tickSleep();}}
 function renderSleepList(){const list=DB.sleep.slice(-8).reverse();
-  $('#sleeplist').innerHTML=list.length?list.map(s=>'<div class="item"><div class="main"><div class="t">'+s.dur+' 小时'+(s.quality?' · '+s.quality:'')+'</div><div class="s">'+fmtMD(s.date)+' · '+s.bed+'→'+s.wake+'</div></div></div>').join(''):'<div class="empty">暂无记录</div>';}
+  $('#sleeplist').innerHTML=list.length?list.map(s=>'<div class="item" onclick="editSleep(\''+s.id+'\')"><div class="main"><div class="t">'+fmtSleepDur(s.dur)+(s.note&&s.note.trim()?' <span style="color:var(--accent)">· '+esc(s.note.trim().slice(0,10))+'</span>':'')+'</div><div class="s">'+(s.date?fmtMD(s.date):'--')+' · '+(s.bed||'--')+'→'+(s.wake||'--')+'</div></div></div>').join(''):'<div class="empty">暂无记录</div>';}
 function sleepToggle(){if(sleepTimer){// 结束
-  const mins=Math.round((Date.now()-sleepStart)/60000);const dur=(mins/60).toFixed(1);
+  const mins=Math.round((Date.now()-sleepStart)/60000);const dur=mins;
   clearInterval(sleepTimer);sleepTimer=null;
-  const rec={id:uid(),date:todayStr(),bed:new Date(sleepStart).toTimeString().slice(0,5),wake:new Date().toTimeString().slice(0,5),dur:+dur,quality:null};
+  const rec={id:uid(),date:todayStr(),bed:new Date(sleepStart).toTimeString().slice(0,5),wake:new Date().toTimeString().slice(0,5),dur:dur,note:'',q:null};
   DB.sleep.push(rec);save();$('#sleepBtn').textContent='开始睡眠';renderSleepList();
-  setTimeout(()=>{const q=confirm('起床啦～昨晚睡得如何？');DB.sleep[DB.sleep.length-1].quality=q?'很好':'一般';save();renderSleepList();
-    if(+dur<DB.sleepGoal)toast('只睡了'+dur+'h，今天要温柔待自己 🌿');else toast('睡了'+dur+'h，状态不错');},300);
+  sleepSummary(rec);
 }else{sleepStart=Date.now();sleepTimer=setInterval(tickSleep,1000);$('#sleepBtn').textContent='结束睡眠';toast('晚安，好好休息');}}
-function tickSleep(){const m=Math.floor((Date.now()-sleepStart)/60000),s=Math.floor((Date.now()-sleepStart)/1000)%60;$('#sleepBig').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
+function tickSleep(){const t=Math.floor((Date.now()-sleepStart)/1000);const hh=String(Math.floor(t/3600)).padStart(2,'0'),mm=String(Math.floor(t/60)%60).padStart(2,'0'),ss=String(t%60).padStart(2,'0');const el=$('#sleepBig');if(el)el.textContent=hh+':'+mm+':'+ss;}
+function sleepSummary(rec){
+  openForm('🌙 睡眠小结',[
+    {k:'dur',label:'本次睡眠时长',type:'text',def:fmtSleepDur(rec.dur)},
+    {k:'range',label:'入睡 / 起床',type:'text',def:(rec.bed||'--')+' → '+(rec.wake||'--')},
+    {k:'note',label:'备注（可选）',type:'textarea',placeholder:'失眠了 / 做了个好梦…'}
+  ],{},v=>{const r=DB.sleep.find(x=>x.id===rec.id);if(r)r.note=(v.note||'').trim();save();renderBack();toast('已保存');});
+}
+function manualSleep(){
+  openForm('🌙 手动记录睡眠',[
+    {k:'date',label:'日期',type:'date',def:todayStr()},
+    {k:'bed',label:'入睡时间',type:'time',def:'23:30'},
+    {k:'wake',label:'起床时间',type:'time',def:'07:00'},
+    {k:'note',label:'备注（可选）',type:'textarea',placeholder:'午觉 / 昨晚…'}
+  ],{},v=>{if(!v.bed||!v.wake){toast('请填写入睡与起床时间');return false;}
+    let mins=(+v.wake.slice(0,2)*60+ +v.wake.slice(3))-(+v.bed.slice(0,2)*60+ +v.bed.slice(3));if(mins<0)mins+=1440;
+    if(mins<=0){toast('时间填写有误');return false;}
+    DB.sleep.push({id:uid(),date:v.date,bed:v.bed,wake:v.wake,dur:mins,note:(v.note||'').trim(),q:null});
+    save();renderBack();toast('已记录 '+fmtSleepDur(mins));});
+}
+function editSleep(id){const r=DB.sleep.find(x=>x.id===id);if(!r)return;
+  openForm('🌙 睡眠记录',[
+    {k:'date',label:'日期',type:'date',def:r.date||todayStr()},
+    {k:'dur',label:'时长（分钟）',type:'num',def:r.dur||0},
+    {k:'note',label:'备注',type:'textarea',def:r.note||''}
+  ],{},v=>{Object.assign(r,{date:v.date,dur:+v.dur||0,note:(v.note||'').trim()});save();renderBack();toast('已保存');});
+}
 function setSleepGoal(){const g=prompt('睡眠目标（小时）',DB.sleepGoal);if(g&&+g){DB.sleepGoal=+g;save();if(curTab==='home')renderHome();else renderSleepList();}}
 
 /* 学习 */
 let studyTimer=null,studyAccum=0,studyRunStart=0,studyRunning=false,pomoOn=false,pomoLeft=0,pomoBreak=false;
 function studyView(){return card('📚 学习','',
   '<div class="timer"><div class="big" id="studyBig">00:00</div>'+
-  '<div class="btns"><button class="go" id="studyBtn" onclick="studyToggle()">开始</button><button id="studyPause" onclick="studyPauseTgl()">暂停</button></div>'+
+  '<div class="btns"><button class="go" id="studyBtn" onclick="studyToggle()">开始</button><button id="studyPause" onclick="studyPauseTgl()">暂停</button><button class="soft" onclick="manualStudy()">＋ 手动</button></div>'+
   '<div class="pomo">🍅 番茄钟：<span id="pomoState">关</span> <span style="color:var(--accent)" onclick="togglePomo()">切换</span></div></div>'+
   '<div id="studyForm" style="margin-top:8px"></div>'+
   '<div class="card" style="margin-top:12px;box-shadow:none;background:var(--card2)"><h3 style="font-size:13px">今日记录</h3><div id="studylist"></div></div>')+'';
@@ -1021,6 +1070,16 @@ function startPomo(){pomoBreak=false;pomoLeft=25*60;updatePomo();}
 function updatePomo(){$('#pomoState').textContent=pomoOn?(pomoBreak?'休息 '+Math.ceil(pomoLeft/60)+'m':'专注 '+Math.ceil(pomoLeft/60)+'m'):'关';}
 function renderStudyList(){const t=todayStr();const list=DB.study.filter(s=>s.date===t);
   $('#studylist').innerHTML=list.length?list.map(s=>'<div class="item"><div class="main"><div class="t">'+s.dur+' 分钟 · '+s.type+'</div><div class="s">'+(s.subject||'')+(s.focus?' · '+s.focus:'')+'</div></div></div>').join(''):'<div class="empty">今日尚无记录</div>';}
+function manualStudy(){
+  openForm('📚 手动添加学习',[
+    {k:'date',label:'日期',type:'date',def:todayStr()},
+    {k:'dur',label:'时长（分钟）',type:'num',def:60},
+    {k:'subject',label:'内容 / 科目',type:'text',placeholder:'例如：高数 第三章'},
+    {k:'type',label:'学习类型',type:'select',options:['阅读','网课','实操','复习','写作'],def:'阅读'},
+    {k:'focus',label:'专注度',type:'select',options:['高度','中度','低度'],def:'高度'},
+    {k:'note',label:'笔记链接（可选）',type:'text',placeholder:'https://…'}
+  ],{},v=>{DB.study.push({id:uid(),date:v.date,subject:(v.subject||'').trim(),type:v.type,focus:v.focus,dur:+v.dur||0,note:(v.note||'').trim()});save();renderBack();toast('已记录 '+fmtSleepDur(+v.dur||0));});
+}
 
 /* 经期 */
 let periodViewYM=null;
@@ -1153,7 +1212,7 @@ function renderMonth(){curViewFn=null;const y=new Date().getFullYear(),m=new Dat
   const expC=led.filter(l=>l.type==='支出'&&l.cur==='CNY').reduce((s,l)=>s+(+l.amount||0),0);
   const catH={};led.filter(l=>l.type==='支出'&&l.cur==='HKD').forEach(l=>catH[l.cat]=(catH[l.cat]||0)+(+l.amount||0));
   const cats=Object.entries(catH).sort((a,b)=>b[1]-a[1]);
-  const sleepN=DB.sleep.filter(s=>s.date.slice(0,7)===ym&&s.dur);const sleepAvg=sleepN.length?(sleepN.reduce((s,x)=>s+x.dur,0)/sleepN.length).toFixed(1):'—';
+  const sleepN=DB.sleep.filter(s=>s.date.slice(0,7)===ym&&s.dur);const sleepAvg=sleepN.length?(sleepN.reduce((s,x)=>s+(+x.dur||0),0)/sleepN.length/60).toFixed(1):'—';
   const studyM=DB.study.filter(s=>s.date.slice(0,7)===ym).reduce((s,x)=>s+(+x.dur||0),0);
   const todosDone=DB.todos.filter(t=>t.status==='已完成').length;
   const moodN=DB.mood.filter(m=>m.date.slice(0,7)===ym).length;
@@ -1230,14 +1289,14 @@ function openForm(title,fields,values,onSave,onDelete,extra,saveTop){
     if(f.type==='select'){html+='<div class="opts" data-k="'+f.k+'">'+f.options.map(o=>'<button class="'+(o===f.def?'on':'')+'" onclick="optPick(this,\''+f.k+'\')">'+o+'</button>').join('')+'</div>';}
     else if(f.type==='textarea'){html+='<textarea data-k="'+f.k+'" placeholder="'+(f.placeholder||'')+'">'+(values[f.k]||f.def||'')+'</textarea>';}
     else if(f.type==='photo'){const pv=values[f.k]||f.def||'';html+='<div class="photoadd"><img id="ph_'+f.k+'" src="'+pv+'" data-val="'+pv+'" style="'+(pv?'':'display:none')+'"><button class="up" onclick="pickPhoto(\''+f.k+'\')">选择图片</button></div>';}
-    else{html+='<input data-k="'+f.k+'" type="'+(f.type==='num'?'number':(f.type==='date'?'date':'text'))+'" value="'+(values[f.k]!==undefined?values[f.k]:(f.def||''))+'" placeholder="'+(f.placeholder||'')+'">';}
+    else{html+='<input data-k="'+f.k+'" type="'+(f.type==='num'?'number':(f.type==='date'?'date':(f.type==='time'?'time':'text')))+'" value="'+(values[f.k]!==undefined?values[f.k]:(f.def||''))+'" placeholder="'+(f.placeholder||'')+'">';}
     html+='</div>';
   });
   html+='<div style="display:flex;gap:10px;margin-top:6px">'+(onDelete?'<button class="btn soft" style="flex:1;background:#EBD3CF;color:#9A5E57" onclick="closeModal();__del()">删除</button>':'')+(saveTop?'':'<button class="btn block" style="flex:2" onclick="__save()">保存</button>')+'</div>'+(extra||'')+'</div>';
   openModal(html);
   window.__save=()=>{const v={};fields.forEach(f=>{if(f.type==='select'){const on=document.querySelector('[data-k="'+f.k+'"].on, .opts[data-k="'+f.k+'"] button.on');v[f.k]=on?on.textContent:f.def;}
     else if(f.type==='photo'){v[f.k]=$('#ph_'+f.k).dataset.val||values[f.k]||'';}
-    else{v[f.k]=document.querySelector('[data-k="'+f.k+'"]').value;}});onSave(v);closeModal();};
+    else{v[f.k]=document.querySelector('[data-k="'+f.k+'"]').value;}});if(onSave(v)!==false)closeModal();};
   window.__del=onDelete||function(){};
 }
 function optPick(btn,k){btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');}
