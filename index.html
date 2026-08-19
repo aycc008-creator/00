@@ -778,7 +778,7 @@ function todoHomeHtml(){
     (t.due?'<span class="pill due">📅'+fmtMD(t.due)+'</span>':'')+'</div>').join('');
     if(pend.length>3)h+='<div class="tmore" onclick="openModule(\'待办事项\',todoView,bindTodo)">查看全部 '+pend.length+' 项 ›</div>';}
   else{h+='<div class="tempty">暂无待处理事项 🎉</div>';}
-  h+='<button class="btn soft todo-go" onclick="openModule(\'待办事项\',todoView,bindTodo)">进入看板 ›</button></div>';return h;}
+  h+='</div>';return h;}
 function advanceTodo(id,e){if(e&&e.stopPropagation)e.stopPropagation();const t=DB.todos.find(x=>x.id===id);if(!t)return;
   if(t.status==='待处理'){t.status='进行中';toast('已进行中');}
   else if(t.status==='进行中'){t.status='已完成';t.doneDate=todayStr();toast('已完成');}
