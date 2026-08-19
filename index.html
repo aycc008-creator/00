@@ -326,7 +326,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .swipe-actions button{border:none;color:#fff;font-size:12.5px;font-weight:600;padding:0 20px;display:flex;align-items:center;background:transparent;cursor:pointer}
 .swipe-actions .sa-del{background:#E2A8A0}
 .swipe-actions .sa-pin{background:#A9BFC9}
-.swipe-content{position:relative;z-index:2;background:var(--card);transition:transform .22s ease;will-change:transform;touch-action:pan-y;border-radius:14px}
+.swipe-content{position:relative;z-index:2;background:var(--card);transition:transform .22s ease;will-change:transform;touch-action:pan-y;border-radius:14px;margin:0}
 </style>
 </head>
 <body>
@@ -1334,7 +1334,7 @@ renderHome=function(){_origRenderHome();setTimeout(afterHomeTrends,30);};
   let sx=0,sy=0,ok=false;
   document.addEventListener('touchstart',e=>{if(e.touches.length!==1){ok=false;return;}const t=e.touches[0];sx=t.clientX;sy=t.clientY;ok=true;},{passive:true});
   document.addEventListener('touchend',e=>{if(!ok)return;ok=false;const t=e.changedTouches[0];const dx=t.clientX-sx,dy=t.clientY-sy;
-    if(dx>70&&dx>Math.abs(dy)*1.6){const el=e.target;if(el&&(el.closest('#mapCanvas')||el.closest('#leafmap')))return;if(subBack)goBack();}
+    if(dx>70&&dx>Math.abs(dy)*1.6){const el=e.target;if(el&&(el.closest('#mapCanvas')||el.closest('#leafmap')))return;if(el&&el.closest('.swipe-wrap'))return;if(subBack)goBack();}
   },{passive:true});
 })();
 
