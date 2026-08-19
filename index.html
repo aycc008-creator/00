@@ -690,7 +690,7 @@ function coreCards(){
     '<div class="amt-row"><span class="amt-cur">🇨🇳¥</span><span class="amt-val">'+Math.round(expC)+'</span></div>';
   let di={icon:'🥗',t:'饮食',bg:'gc-mint',click:"addDiet()"};
   const lastD=[...DB.diet].reverse()[0];
-  if(lastD){di.v=(lastD.desc&&lastD.desc.trim())?lastD.desc.trim().slice(0,18):(lastD.meal||'最近一餐');di.s=lastD.meal||'最近一餐';}else{di.v='记录一餐';di.s='今日饮食';}
+  if(lastD){di.v=(lastD.desc&&lastD.desc.trim())?lastD.desc.trim().slice(0,18):(lastD.meal||'最近一餐');di.s=(lastD.meal||'最近一餐')+(lastD.photo?' 📷':'');}else{di.v='记录一餐';di.s='今日饮食';}
   let sl={icon:'🌙',t:'睡眠',bg:'gc-blue',click:"openModule('睡眠',sleepView,bindSleep)"};
   const lastS=[...DB.sleep].reverse().find(s=>s.dur);
   if(lastS){const dur=parseFloat(lastS.dur)||0;const h=Math.floor(dur);const m=Math.round((dur-h)*60);
@@ -931,14 +931,14 @@ function addDiet(){const meals=['早餐','午餐','晚餐','加餐'];
   {k:'date',label:'日期',type:'date',def:todayStr()},
   {k:'desc',label:'食物描述',type:'textarea',def:''},
   {k:'photo',label:'照片',type:'photo',def:''}
-],{},v=>{v.title=v.date+' '+v.meal;DB.diet.push(Object.assign({id:uid()},v));save();renderBack();toast('已记录');},null,'<button class="btn soft" style="width:100%;margin-top:8px" onclick="closeModal();openModule(\'饮食记录\',dietView,bindDiet)">📋 查看记录</button>');}
+],{},v=>{v.title=v.date+' '+v.meal;DB.diet.push(Object.assign({id:uid()},v));try{save();}catch(e){toast('存储空间已满，请删除部分旧照片');}renderBack();toast('已记录');},null,'<button class="btn soft" style="width:100%;margin-top:8px" onclick="closeModal();openModule(\'饮食记录\',dietView,bindDiet)">📋 查看记录</button>');}
 function editDiet(id){const d=DB.diet.find(x=>x.id===id);if(!d)return;const meals=['早餐','午餐','晚餐','加餐'];
   openForm('编辑饮食',[
   {k:'meal',label:'餐别',type:'select',options:meals,def:d.meal||'早餐'},
   {k:'date',label:'日期',type:'date',def:d.date||todayStr()},
   {k:'desc',label:'食物描述',type:'textarea',def:d.desc||''},
   {k:'photo',label:'照片',type:'photo',def:d.photo||''}
-],{},v=>{v.title=v.date+' '+v.meal;Object.assign(d,v);save();renderBack();toast('已保存');},()=>{DB.diet=DB.diet.filter(x=>x.id!==id);save();renderBack();toast('已删除');});}
+],{},v=>{v.title=v.date+' '+v.meal;Object.assign(d,v);try{save();}catch(e){toast('存储空间已满，请删除部分旧照片');}renderBack();toast('已保存');},()=>{DB.diet=DB.diet.filter(x=>x.id!==id);save();renderBack();toast('已删除');});}
 
 /* 睡眠 */
 let sleepTimer=null,sleepStart=0;
@@ -1216,7 +1216,7 @@ function openForm(title,fields,values,onSave,onDelete,extra,saveTop){
   window.__del=onDelete||function(){};
 }
 function optPick(btn,k){btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');}
-function pickPhoto(k){const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.onchange=()=>{const f=inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const img=$('#ph_'+k);img.src=rd.result;img.style.display='';img.dataset.val=rd.result;};rd.readAsDataURL(f);};inp.click();}
+function pickPhoto(k){const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.onchange=()=>{const f=inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{const img=$('#ph_'+k);const raw=new Image();raw.onload=()=>{const maxW=800;let w=raw.width,h=raw.height;if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}const cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(raw,0,0,w,h);const data=cv.toDataURL('image/jpeg',0.72);img.src=data;img.style.display='';img.dataset.val=data;};raw.src=rd.result;};rd.readAsDataURL(f);};inp.click();}
 function openModal(html){const m=$('#modal');m.innerHTML=html;m.classList.remove('hidden');}
 function closeModal(){$('#modal').classList.add('hidden');$('#modal').innerHTML='';}
 
