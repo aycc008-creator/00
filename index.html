@@ -11,8 +11,8 @@
 <title>00 · 静谧之地</title>
 <style>
 :root{
-  --bg:#F3EFE9; --bg2:#ECE6DD; --card:#FCFAF6; --card2:#F6F1EA;
-  --ink:#5C564E; --ink2:#8C857A; --line:rgba(120,110,98,.14);
+  --bg:#E9F1F8; --bg2:#E3EDF2; --card:#FFFFFF; --card2:#EEF4F1;
+  --ink:#46505B; --ink2:#8A97A3; --line:rgba(120,150,170,.14);
   --pink:#D9C4C0; --pink2:#C9A8A4; --blue:#AEBFC9; --green:#B7C7B4;
   --purple:#C7BAD2; --milk:#DBCBB8; --accent:#B7A6C9; --accent2:#A9BFC9;
   --shadow:0 6px 22px rgba(120,110,98,.13); --radius:20px;
@@ -23,10 +23,7 @@ html,body{margin:0;height:100%}
 body{
   font-family:"Yuanti SC","PingFang SC",ui-rounded,-apple-system,BlinkMacSystemFont,"Hiragino Sans GB","Microsoft YaHei",sans-serif;
   background:
-    radial-gradient(120% 60% at 12% 0%, rgba(199,186,210,.20), transparent 55%),
-    radial-gradient(120% 60% at 92% 4%, rgba(174,191,201,.20), transparent 55%),
-    radial-gradient(140% 80% at 50% 100%, rgba(217,196,192,.18), transparent 60%),
-    linear-gradient(180deg,#F7F2EC 0%, #EFE9E2 45%, #EAE5DE 100%);
+    linear-gradient(160deg,#E9F5F0 0%, #E9F1F8 52%, #F1ECF7 100%);
   color:var(--ink); line-height:1.6;
   -webkit-font-smoothing:antialiased; overscroll-behavior:none;
 }
@@ -71,16 +68,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .card:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(120,110,98,.16)}
 /* 首页组件柔和化：去掉一格一格的割裂感（仅作用于首页，不影响其它视图） */
 .home{padding:2px 0}
-.home .card{background:rgba(252,250,246,.5);box-shadow:0 2px 10px rgba(120,110,98,.05);margin-bottom:11px;border:1px solid rgba(255,255,255,.45)}
-.home .card:hover{transform:none;box-shadow:0 2px 10px rgba(120,110,98,.05)}
+.home .card{background:#FFFFFF;box-shadow:0 8px 22px rgba(110,135,155,.12);margin-bottom:11px;border:1px solid rgba(255,255,255,.9);border-radius:20px}
+.home .card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(110,135,155,.16)}
 /* 经期图例：字眼缩小、可爱圆体 */
 .legend{display:flex;gap:14px;justify-content:center;margin:6px 0 0;flex-wrap:wrap}
 .lg{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--ink2);font-family:"Yuanti SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;letter-spacing:.5px}
 .lg i{font-style:normal;font-size:13px;line-height:1}
 .card h3{margin:0 0 10px;font-size:14px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:7px;letter-spacing:.5px}
 .card h3 .more{margin-left:auto;font-size:12px;color:var(--accent);font-weight:500}
-.hometop{margin:6px 2px 18px;padding:18px 20px 16px;border-radius:24px;
-  background:linear-gradient(135deg,rgba(252,250,246,.95),rgba(245,239,231,.82));box-shadow:var(--shadow)}
+.hometop{margin:6px 2px 18px;padding:18px 20px 16px;border-radius:22px;
+  background:#FFFFFF;box-shadow:0 8px 22px rgba(110,135,155,.12);border:1px solid rgba(255,255,255,.9)}
 .ht-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .hi{font-size:20px;font-weight:600;color:var(--ink);letter-spacing:1px}
 .hi .nm{color:var(--accent);font-weight:700}
@@ -89,7 +86,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .meta .mc{color:var(--ink2)}
 .meta .mw{display:flex;align-items:center;gap:3px;font-size:17px;color:var(--ink);font-weight:600}
 .meta .mw .ti{font-size:19px;margin-right:1px}
-.ht-quote{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.ht-quote{margin-top:12px;padding-top:12px;border-top:1px solid rgba(120,150,170,.14);display:flex;flex-direction:column;gap:8px}
 .ht-qlabel{font-size:11.5px;letter-spacing:1px;color:var(--ink2);display:flex;align-items:center;gap:5px}
 .ht-qbody{display:flex;align-items:flex-start;gap:12px}
 .ht-qbody .quote{flex:1}
@@ -125,19 +122,19 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .todoov .num{font-size:30px;font-weight:700;color:var(--accent)}
 .todoov .lbl{font-size:12.5px;color:var(--ink2)}
 /* 速览网格（严格按参考图：3列 × 2行，马卡龙色卡） */
-.sec-title{font-size:17px;font-weight:700;color:var(--ink);margin:18px 4px 10px;letter-spacing:.5px}
+.sec-title{font-size:15px;font-weight:700;color:#5A6671;margin:18px 4px 10px;letter-spacing:1px}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.gcard{border-radius:16px;padding:16px 14px 14px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:120px;transition:.15s;cursor:pointer}
+.gcard{border-radius:18px;padding:14px 12px 13px;display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-height:114px;background:#FFFFFF;border:1px solid rgba(255,255,255,.9);box-shadow:0 6px 16px rgba(110,135,155,.10);transition:.15s;cursor:pointer}
 .gcard:active{transform:scale(.97)}
 /* 马卡龙背景色 */
-.gc-pink{background:linear-gradient(145deg,#FFF0F3,#FFE8EC)}
-.gc-cream{background:linear-gradient(145deg,#FFFBF5,#FFF8EE)}
-.gc-mint{background:linear-gradient(145deg,#F0FBF5,#E8F9EF)}
-.gc-blue{background:linear-gradient(145deg,#F0F7FB,#E8F3F9)}
-.gcard .gi{font-size:30px;line-height:1;margin-bottom:2px}
-.gcard .gt{font-size:12px;color:#A89F94;font-weight:500;letter-spacing:.3px}
-.gcard .gv{font-size:16px;font-weight:700;color:#4A4540;line-height:1.35;word-break:break-word}
-.gcard .gs{font-size:11.5px;color:#B5ADA3;margin-top:auto;padding-top:2px}
+.gc-pink{background:#FBE3EC}
+.gc-cream{background:#FFF1DA}
+.gc-mint{background:#E2F2EA}
+.gc-blue{background:#DCEBF8}
+.gcard .gi{font-size:20px;line-height:1;width:38px;height:38px;border-radius:13px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.gcard .gt{font-size:11px;color:#9AA7B2;font-weight:500;letter-spacing:.3px}
+.gcard .gv{font-size:14px;font-weight:700;color:#3E4853;line-height:1.35;word-break:break-word}
+.gcard .gs{font-size:10.5px;color:#A9B4BE;margin-top:auto;padding-top:3px}
 .photo-sm{width:46px;height:46px;border-radius:12px;object-fit:cover;background:var(--card2)}
 /* 支线看板 */
 .dashsum{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
@@ -650,7 +647,7 @@ function coreCards(){
   if(todays){const hm=Math.round(todays);st.v=(hm>=60?Math.floor(hm/60)+'h':'0h');st.s='今日累计';}else{st.v='0h';st.s='今日累计';}
   return [cd,pe,lg,di,sl,st];
 }
-function coreCardHtml(c){return '<div class="gcard '+(c.bg||'gc-cream')+'" onclick="'+c.click+'"><div class="gi">'+c.icon+'</div><div class="gt">'+c.t+'</div><div class="gv">'+(c.v||'—')+'</div>'+(c.s?'<div class="gs">'+c.s+'</div>':'')+'</div>';}
+function coreCardHtml(c){return '<div class="gcard" onclick="'+c.click+'"><div class="gi '+(c.bg||'gc-cream')+'">'+c.icon+'</div><div class="gt">'+c.t+'</div><div class="gv">'+(c.v||'—')+'</div>'+(c.s?'<div class="gs">'+c.s+'</div>':'')+'</div>';}
 function afterHomeTrends(){coreCards().forEach(c=>{if(c.trend){const cv=$('#tr_'+c.t);if(cv)miniTrend(cv,c.trend);}});}
 /* 心情 */
 function moodHtml(){const list=[...DB.mood].reverse().slice(0,3);
