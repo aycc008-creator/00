@@ -320,6 +320,13 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .dtop+.mrow{border-top:none}
 .mtime2{flex:none;font-size:10.5px;color:var(--accent);background:var(--card2);padding:1px 7px;border-radius:8px;margin-top:1px}
 .mdel{flex:none;font-size:11px;color:#C99A9A;background:#F6EAEA;padding:2px 8px;border-radius:8px;cursor:pointer}
+/* 左滑删除/置顶 */
+.swipe-wrap{position:relative;overflow:hidden;border-radius:14px;margin-bottom:9px}
+.swipe-actions{position:absolute;top:0;right:0;bottom:0;display:flex;z-index:1}
+.swipe-actions button{border:none;color:#fff;font-size:12.5px;font-weight:600;padding:0 20px;display:flex;align-items:center;background:transparent;cursor:pointer}
+.swipe-actions .sa-del{background:#E2A8A0}
+.swipe-actions .sa-pin{background:#A9BFC9}
+.swipe-content{position:relative;z-index:2;background:var(--card);transition:transform .22s ease;will-change:transform;touch-action:pan-y;border-radius:14px}
 </style>
 </head>
 <body>
@@ -617,7 +624,7 @@ function switchTab(t){curTab=t;subBack=null;curViewFn=null;$('#subhdr').style.di
 function openModule(title,viewFn,after){curTitle=title;curViewFn=(typeof viewFn==='function')?viewFn:()=>viewFn;curAfter=after;
   subBack=()=>{if(curTab==='home')renderHome();else if(curTab==='branch')renderBranch();else if(curTab==='month')renderMonth();else renderMe();};
   $('#subhdr').style.display='flex';$('#subtitle').textContent=title;
-  $('#view').innerHTML=curViewFn();if(after)after();window.scrollTo(0,0);}
+  $('#view').innerHTML=curViewFn();if(after)after();enhanceSwipe();window.scrollTo(0,0);}
 function goBack(){$('#subhdr').style.display='none';if(subBack)subBack();else switchTab(curTab);}
 
 /* ============ 首页 ============ */
@@ -661,7 +668,7 @@ function renderHome(){curViewFn=null;
     card('🌤️ 心情记录','查看',moodHtml())+
     card('✈️ 旅游打卡','',travelHomeHtml())+
     '</div>';
-  loadWeather();loadNews();paintQuote();
+  loadWeather();loadNews();paintQuote();enhanceSwipe();
 }
 function greet(){const h=new Date().getHours();if(h<6)return'晚上好';if(h<12)return'早上好';if(h<14)return'中午好';if(h<18)return'下午好';return'晚上好';}
 function card(t,more,body,rbtn){return '<div class="card"><h3>'+t+(more?'<span class="more" onclick="'+moreClick(more)+'">'+more+'</span>':'')+(rbtn?'<span style="margin-left:auto">'+rbtn+'</span>':'')+'</h3>'+body+'</div>';}
@@ -739,7 +746,7 @@ function moodHtml(){const n=DB.mood.length;
 function addMood(){const v=$('#moodIn').value.trim();if(!v){toast('写点什么吧');return;}DB.mood.push({id:uid(),date:todayStr(),time:new Date().toTimeString().slice(0,5),text:v});save();renderHome();}
 function moodView(){const byDate={};DB.mood.forEach(m=>{(byDate[m.date]=byDate[m.date]||[]).push(m);});
   const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
-  let body=dates.map(dt=>{const ms=byDate[dt];const w=['日','一','二','三','四','五','六'][new Date(dt+'T00:00:00').getDay()];
+  let body=dates.map(dt=>{const ms=pinSort(byDate[dt]);const w=['日','一','二','三','四','五','六'][new Date(dt+'T00:00:00').getDay()];
     return '<div class="dday"><div class="dtop"><span class="ddate">'+fmtMD(dt)+'</span><span class="dwk">周'+w+'</span><span class="dcnt">'+ms.length+' 条</span></div>'+
       ms.map(m=>'<div class="mrow" data-del="'+m.id+'" data-del-db="mood"><span class="mtime2">'+(m.time||'--')+'</span><span style="flex:1">'+esc(m.text)+'</span><span class="mdel" onclick="delMood(\''+m.id+'\')">删除</span></div>').join('')+'</div>';}).join('');
   return card('🌤️ 心情记录','',
@@ -806,7 +813,7 @@ function branchDash(k){const m=MODULES.find(x=>x.k===k);if(!m)return '';
     const list=[...DB.period].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
     flow=flowList(list.map(p=>'<div class="item" data-del="'+p.date+'" data-del-db="period"><div class="main"><div class="t">🌸 经期记录</div><div class="s">'+fmtMD(p.date)+'</div></div></div>').join(''));
     addFn='openModule(\'经期\',periodView,bindPeriod)';}
-  else if(k==='countdown'){const list=DB.countdown.map(c=>({c,d:daysBetween(todayStr(),c.date)})).sort((a,b)=>a.d-b.d);const up=list.filter(x=>x.d>=-1).length;
+  else if(k==='countdown'){const list=DB.countdown.map(c=>({c,d:daysBetween(todayStr(),c.date)})).sort((a,b)=>(b.c.pin?1:0)-(a.c.pin?1:0)||a.d-b.d);const up=list.filter(x=>x.d>=-1).length;
     sum=sumCards([['临近事件',up+' 个','#C9B0C2'],['总事件',list.length+' 个','#AEBFC9'],['最近',list.length?esc(list[0].c.name.slice(0,8)):'—','#C9A8A4']]);
     flow=flowList(list.slice(0,15).map(x=>'<div class="item" data-del="'+x.c.id+'" data-del-db="countdown" onclick="editCountdown(\''+x.c.id+'\')"><div class="main"><div class="t">'+esc(x.c.name)+'</div><div class="s">'+(x.c.note||'')+' · '+x.c.date+'</div></div><div style="font-size:18px;font-weight:700;color:var(--accent)">'+(x.d<0?'已至':x.d===0?'今天':x.d+'天')+'</div></div>').join(''));
     addFn='addCountdown()';}
@@ -839,7 +846,7 @@ function todoView(){const sts=['待处理','进行中','已完成'];
 }
 function bindTodo(){todoRender('看板');}
 function todoHomeHtml(){
-  const pend=DB.todos.filter(t=>t.status==='待处理');
+  const pend=pinSort(DB.todos.filter(t=>t.status==='待处理'));
   const ing=DB.todos.filter(t=>t.status==='进行中').length;
   const done=DB.todos.filter(t=>t.status==='已完成').length;
   const show=pend.slice(0,3);let h='<div class="todo-home">';
@@ -857,7 +864,7 @@ function advanceTodo(id,e){if(e&&e.stopPropagation)e.stopPropagation();const t=D
   else return;save();todoRender('看板');}
 function todoToggle(v){document.querySelectorAll('[data-tv]').forEach(b=>b.classList.toggle('on',b.dataset.tv===v));todoRender(v);}
 function todoRender(v){const b=$('#todobody');if(!b)return;
-  if(v==='看板'){const sts=['待处理','进行中','已完成'];b.innerHTML=sts.map(s=>{const list=DB.todos.filter(t=>t.status===s);
+  if(v==='看板'){const sts=['待处理','进行中','已完成'];b.innerHTML=sts.map(s=>{const list=pinSort(DB.todos.filter(t=>t.status===s));
     const items=list.length?list.map(t=>{const adv=s==='待处理'?'<div class="advance" onclick="advanceTodo(\''+t.id+'\',event)">➜</div>':s==='进行中'?'<div class="advance" onclick="advanceTodo(\''+t.id+'\',event)">➜</div>':'<div class="done-ic">✓</div>';
       return '<div class="kbitem" data-del="'+t.id+'" data-del-db="todo" onclick="editTodo(\''+t.id+'\')"><div class="kb-main"><div class="ti">'+esc(t.title)+'</div><div class="meta">'+
       (t.priority?'<span class="pill '+(t.priority==='高'?'h':t.priority==='中'?'m':'l')+'">'+t.priority+'</span>':'')+
@@ -936,6 +943,8 @@ function ledFi(l){const sym=l.cur==='HKD'?'HK$':'¥';const own=l.owner==='家庭
 function bindLedgerAll(){if(!DB.ledger.length){$('#ledgerall').innerHTML='<div class="empty">暂无记录</div>';return;}
   const byDate={};DB.ledger.forEach(l=>{(byDate[l.date]=byDate[l.date]||[]).push(l);});
   const dates=Object.keys(byDate).sort().reverse();let h='';
+  const pins=pinSort(DB.ledger.filter(l=>l.pin));
+  if(pins.length)h='<div class="ledday" style="margin-bottom:10px"><div class="dtop"><span class="ddate">⭐ 置顶</span><span class="dcnt">'+pins.length+' 笔</span></div>'+pins.map(ledFi).join('')+'</div>';
   dates.forEach(d=>{const items=byDate[d];
     const eH=items.filter(l=>l.type==='支出'&&l.cur==='HKD'),iH=items.filter(l=>l.type==='收入'&&l.cur==='HKD');
     const eC=items.filter(l=>l.type==='支出'&&l.cur==='CNY'),iC=items.filter(l=>l.type==='收入'&&l.cur==='CNY');
@@ -966,7 +975,7 @@ function dietView(){const meals=['早餐','午餐','晚餐','加餐'];const mcls
   let body='';
   if(!dates.length){body='<div class="empty">还没有饮食记录 🍽️<br>点右上角 ＋ 记录第一餐</div>';}
   else{body=dates.map(dt=>{const items=byDate[dt];const w=['日','一','二','三','四','五','六'][new Date(dt+'T00:00:00').getDay()];
-    const mealHtml=meals.map(m=>{const ms=items.filter(x=>x.meal===m);if(!ms.length)return '';
+    const mealHtml=meals.map(m=>{const ms=pinSort(items.filter(x=>x.meal===m));if(!ms.length)return '';
       return '<div class="dmeal"><span class="dmk '+mcls[m]+'">'+m+'</span><div class="ditems">'+ms.map(d=>
         '<div class="ditem" data-del="'+d.id+'" data-del-db="diet" onclick="editDiet(\''+d.id+'\')">'+(d.photo?'<img src="'+d.photo+'">':'<div class="dph">🍽️</div>')+
         '<div class="dtxt"><div class="ddesc">'+esc(d.desc||d.meal)+'</div></div>'+(d.photo?'<span class="dflag">📷</span>':'')+'</div>').join('')+'</div></div>';}).join('');
@@ -1000,7 +1009,7 @@ function sleepView(){const last=[...DB.sleep].reverse()[0];
     '';
 }
 function bindSleep(){renderSleepList();if(sleepTimer){$('#sleepBtn').textContent='结束睡眠';tickSleep();}}
-function renderSleepList(){const list=DB.sleep.slice(-8).reverse();
+function renderSleepList(){const list=pinSort([...DB.sleep].reverse()).slice(0,8);
   $('#sleeplist').innerHTML=list.length?list.map(s=>'<div class="item" data-del="'+s.id+'" data-del-db="sleep" onclick="editSleep(\''+s.id+'\')"><div class="main"><div class="t">'+fmtSleepDur(s.dur)+(s.note&&s.note.trim()?' <span style="color:var(--accent)">· '+esc(s.note.trim().slice(0,10))+'</span>':'')+'</div><div class="s">'+(s.date?fmtMD(s.date):'--')+' · '+(s.bed||'--')+'→'+(s.wake||'--')+'</div></div></div>').join(''):'<div class="empty">暂无记录</div>';}
 function sleepToggle(){if(sleepTimer){// 结束
   const mins=Math.round((Date.now()-sleepStart)/60000);const dur=mins;
@@ -1068,7 +1077,7 @@ function tickStudy(){const ms=studyElapsedMs();const m=Math.floor(ms/60000),s=Ma
 function togglePomo(){pomoOn=!pomoOn;if(pomoOn)startPomo();updatePomo();}
 function startPomo(){pomoBreak=false;pomoLeft=25*60;updatePomo();}
 function updatePomo(){$('#pomoState').textContent=pomoOn?(pomoBreak?'休息 '+Math.ceil(pomoLeft/60)+'m':'专注 '+Math.ceil(pomoLeft/60)+'m'):'关';}
-function renderStudyList(){const t=todayStr();const list=DB.study.filter(s=>s.date===t);
+function renderStudyList(){const t=todayStr();const list=pinSort(DB.study.filter(s=>s.date===t));
   $('#studylist').innerHTML=list.length?list.map(s=>'<div class="item" data-del="'+s.id+'" data-del-db="study"><div class="main"><div class="t">'+s.dur+' 分钟 · '+s.type+'</div><div class="s">'+(s.subject||'')+(s.focus?' · '+s.focus:'')+'</div></div></div>').join(''):'<div class="empty">今日尚无记录</div>';}
 function manualStudy(){
   openForm('📚 手动添加学习',[
@@ -1119,7 +1128,7 @@ function predictPeriod(){const starts=periodStarts();if(!starts.length)return nu
 function legendHtml(){return '<span class="lg"><i>🌸</i>经期</span><span class="lg"><i>💫</i>排卵</span><span class="lg"><i>🌀</i>易孕</span>';}
 
 /* 倒数 */
-function countdownView(){const list=DB.countdown.map(c=>({c,d:daysBetween(todayStr(),c.date)})).sort((a,b)=>a.d-b.d);
+function countdownView(){const list=DB.countdown.map(c=>({c,d:daysBetween(todayStr(),c.date)})).sort((a,b)=>(b.c.pin?1:0)-(a.c.pin?1:0)||a.d-b.d);
   return card('⏳ 倒数日','',list.length?('<div class="list">'+list.map(x=>'<div class="item" data-del="'+x.c.id+'" data-del-db="countdown" onclick="editCountdown(\''+x.c.id+'\')"><div class="main"><div class="t">'+esc(x.c.name)+'</div><div class="s">'+(x.c.note||'')+' · '+x.c.date+'</div></div><div style="font-size:18px;font-weight:700;color:var(--accent)">'+(x.d<0?'已至':x.d===0?'今天':x.d+'天')+'</div></div>').join('')+'</div>'):    '<div class="empty">还没有倒数日</div>',
     '<button class="hiadd" onclick="addCountdown()">＋</button>');}
 function bindCountdown(){}
@@ -1146,7 +1155,7 @@ function travelView(){const online=DB.net;
     '</div>'+
     '<div class="maphint" id="mapHint">'+(online?'联网真实地图 · 带具体地名的标记 · 点标记查看':'滚轮/双指缩放 · 拖拽平移 · 点省放大')+'</div>'+
     mapHtml+'</div>'+
-    card('✈️ 足迹','',DB.travel.length?('<div class="list">'+DB.travel.slice().reverse().map(t=>'<div class="item" data-del="'+t.id+'" data-del-db="travel" onclick="editTravel(\''+t.id+'\')">'+(t.photo?'<img class="thumb" src="'+t.photo+'">':'<div class="thumb" style="display:flex;align-items:center;justify-content:center">📍</div>')+'<div class="main"><div class="t">'+esc(t.place||'足迹')+'</div><div class="s">'+(t.prov||'')+' · '+(t.date||'')+'</div></div></div>').join('')+'</div>'):'<div class="empty">添加你的第一个足迹</div>',
+    card('✈️ 足迹','',DB.travel.length?('<div class="list">'+pinSort(DB.travel.slice().reverse()).map(t=>'<div class="item" data-del="'+t.id+'" data-del-db="travel" onclick="editTravel(\''+t.id+'\')">'+(t.photo?'<img class="thumb" src="'+t.photo+'">':'<div class="thumb" style="display:flex;align-items:center;justify-content:center">📍</div>')+'<div class="main"><div class="t">'+esc(t.place||'足迹')+'</div><div class="s">'+(t.prov||'')+' · '+(t.date||'')+'</div></div></div>').join('')+'</div>'):'<div class="empty">添加你的第一个足迹</div>',
     '<button class="hiadd" onclick="travelAddPlace()">＋</button>');
 }
 function bindTravel(){const lit=new Set(DB.travel.map(t=>t.prov).filter(Boolean));
@@ -1306,7 +1315,7 @@ function closeModal(){$('#modal').classList.add('hidden');$('#modal').innerHTML=
 
 /* ============ 工具 ============ */
 function esc(s){return (s==null?'':''+s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function renderBack(){if(curViewFn){$('#view').innerHTML=curViewFn();if(curAfter)curAfter();}else if(curTab==='home')renderHome();else if(curTab==='branch')renderBranch();else if(curTab==='month')renderMonth();else renderMe();}
+function renderBack(){if(curViewFn){$('#view').innerHTML=curViewFn();if(curAfter)curAfter();enhanceSwipe();}else if(curTab==='home')renderHome();else if(curTab==='branch')renderBranch();else if(curTab==='month')renderMonth();else renderMe();}
 /* 迷你趋势 */
 function miniTrend(cv,vals){const dpr=window.devicePixelRatio||1;const W=cv.clientWidth||200,H=30;cv.width=W*dpr;cv.height=H*dpr;const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);const max=Math.max(1,...vals);const bw=W/vals.length;vals.forEach((v,i)=>{const h=(v/max)*(H-4);ctx.fillStyle='rgba(183,166,201,.7)';ctx.fillRect(i*bw+bw*0.28,h?H-h-2:0,bw*0.44,h||1);});}
 function drawBars(cv,labels,vals,col,vals2,col2){if(!cv)return;const dpr=window.devicePixelRatio||1;const W=cv.clientWidth||300,H=160;cv.width=W*dpr;cv.height=H*dpr;const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
@@ -1352,6 +1361,58 @@ function delRecord(db,id){if(db==='todo')DB.todos=DB.todos.filter(x=>x.id!==id);
   else if(db==='countdown')DB.countdown=DB.countdown.filter(x=>x.id!==id);
   else if(db==='period')DB.period=DB.period.filter(p=>p.date!==id);
   save();renderBack();toast('已删除');}
+
+/* ============ 左滑删除 / 置顶 ============ */
+function pinSort(list){return [...list].sort((a,b)=>(b.pin?1:0)-(a.pin?1:0)||((b.pinT||0)-(a.pinT||0)));}
+function findRec(db,id){if(db==='todo')return DB.todos.find(x=>x.id===id);
+  if(db==='ledger')return DB.ledger.find(x=>x.id===id);
+  if(db==='diet')return DB.diet.find(x=>x.id===id);
+  if(db==='sleep')return DB.sleep.find(x=>x.id===id);
+  if(db==='study')return DB.study.find(x=>x.id===id);
+  if(db==='mood')return DB.mood.find(x=>x.id===id);
+  if(db==='travel')return DB.travel.find(x=>x.id===id);
+  if(db==='countdown')return DB.countdown.find(x=>x.id===id);
+  if(db==='period')return DB.period.find(p=>p.date===id);
+  return null;}
+function swipeW(w){return (w.querySelector('.swipe-actions').offsetWidth||132);}
+function openSwipe(w){if(swOpen&&swOpen!==w)closeSwipe(swOpen);swOpen=w;w.querySelector('.swipe-content').style.transform='translateX(-'+swipeW(w)+'px)';}
+function closeSwipe(w){if(w){w.querySelector('.swipe-content').style.transform='';if(swOpen===w)swOpen=null;}}
+function swipeDel(btn){const w=btn.closest('.swipe-wrap');if(!w)return;
+  if(confirm('删除这条'+((DEL_NAMES[w.getAttribute('data-del-db')]||'')+'记录')+'？'))delRecord(w.getAttribute('data-del-db'),w.getAttribute('data-del'));
+  else closeSwipe(w);}
+function swipePin(btn){const w=btn.closest('.swipe-wrap');if(!w)return;
+  const rec=findRec(w.getAttribute('data-del-db'),w.getAttribute('data-del'));if(!rec){closeSwipe(w);toast('无法定位记录');return;}
+  rec.pin=!rec.pin;rec.pinT=rec.pin?Date.now():null;save();renderBack();toast(rec.pin?'已置顶 ⭐':'已取消置顶');}
+function enhanceSwipe(){
+  document.querySelectorAll('[data-del]').forEach(el=>{
+    if(el.closest('.swipe-wrap')||el.classList.contains('cd'))return;
+    const wrap=document.createElement('div');wrap.className='swipe-wrap';
+    wrap.setAttribute('data-del',el.getAttribute('data-del'));
+    wrap.setAttribute('data-del-db',el.getAttribute('data-del-db'));
+    const act=document.createElement('div');act.className='swipe-actions';
+    act.innerHTML='<button class="sa-pin" onclick="swipePin(this)">置顶</button><button class="sa-del" onclick="swipeDel(this)">删除</button>';
+    wrap.appendChild(act);
+    el.parentNode.insertBefore(wrap,el);
+    el.classList.add('swipe-content');
+    wrap.appendChild(el);
+  });
+}
+let swWrap=null,swX=0,swY=0,swOpen=null,swActive=false;
+document.addEventListener('touchstart',e=>{const w=e.target.closest('.swipe-wrap');if(!w)return;
+  if(swOpen&&swOpen!==w)closeSwipe(swOpen);
+  swWrap=w;swX=e.touches[0].clientX;swY=e.touches[0].clientY;swActive=true;},{passive:true});
+document.addEventListener('touchmove',e=>{if(!swActive||!swWrap)return;
+  const t=e.touches[0],dx=t.clientX-swX,dy=t.clientY-swY;
+  if(Math.abs(dx)<6&&Math.abs(dy)<6)return;
+  if(Math.abs(dy)>Math.abs(dx)){swActive=false;return;}
+  e.preventDefault();
+  const base=swOpen===swWrap?swipeW(swWrap):0;
+  const nx=Math.min(0,Math.max(-swipeW(swWrap),base+dx));
+  swWrap.querySelector('.swipe-content').style.transform='translateX('+nx+'px)';},{passive:false});
+document.addEventListener('touchend',()=>{if(!swActive||!swWrap)return;const w=swWrap;
+  const tr=w.querySelector('.swipe-content').style.transform;const dx=tr?parseFloat(tr.replace(/[^-\d.]/g,''))||0:0;
+  if(dx<-40)openSwipe(w);else closeSwipe(w);
+  swActive=false;swWrap=null;},{passive:true});
 
 /* ============ 启动 ============ */
 function boot(){showLock();}
