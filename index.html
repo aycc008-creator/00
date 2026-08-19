@@ -181,6 +181,28 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .todo{padding:9px;border-radius:11px;background:var(--card);margin-bottom:8px;font-size:12.5px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
 .todo .ti{font-weight:600;font-size:13px}
 .todo .meta{font-size:11px;color:var(--ink2);margin-top:4px;display:flex;gap:5px;flex-wrap:wrap}
+/* 首页待办迷你列表 */
+.todo-home{display:flex;flex-direction:column;gap:6px}
+.todo-home .tmini{display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:11px;background:var(--card2);cursor:pointer}
+.todo-home .tdot{width:7px;height:7px;border-radius:50%;background:var(--pink2);flex:none}
+.todo-home .ttx{flex:1;min-width:0;font-size:12px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.todo-home .tmore{font-size:11px;color:var(--ink2);text-align:center;padding:3px 0;cursor:pointer}
+.todo-home .tempty{font-size:12px;color:var(--ink2);text-align:center;padding:6px}
+.todo-home .todo-go{margin-top:4px;width:100%;font-size:12.5px;padding:8px 14px}
+/* 竖向看板 */
+.kbsec{margin-bottom:14px}
+.kbsec .kh{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--ink);margin:0 2px 8px}
+.kbsec .kh .bar{width:3px;height:14px;border-radius:3px;background:var(--accent);opacity:.7}
+.kbsec .kh .cnt{font-size:10.5px;font-weight:600;color:#fff;background:var(--ink2);border-radius:8px;padding:1px 7px}
+.kbsec.done .kh .bar{background:var(--green)}
+.kbitem{display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:13px;background:var(--card);box-shadow:0 2px 7px rgba(110,135,155,.10);margin-bottom:7px;border:1px solid rgba(255,255,255,.9);cursor:pointer}
+.kbitem .kb-main{flex:1;min-width:0}
+.kbitem .ti{font-weight:600;font-size:13px;color:var(--ink)}
+.kbitem .meta{font-size:11px;color:var(--ink2);margin-top:4px;display:flex;gap:5px;flex-wrap:wrap}
+.advance{width:30px;height:30px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;background:linear-gradient(135deg,var(--accent),var(--purple));box-shadow:0 3px 9px rgba(150,120,170,.35);cursor:pointer;transition:.12s}
+.advance:active{transform:scale(.9)}
+.done-ic{width:30px;height:30px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--green);background:#E2F0E6}
+.pill.due{background:#E0EBF5;color:#5E7A93}
 .cal{gap:3px;display:grid;grid-template-columns:repeat(7,1fr)}
 .cal .cd{aspect-ratio:1;border-radius:9px;background:var(--card2);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:var(--ink2);position:relative}
 .cal .cd.hm{background:var(--card);color:var(--ink)}
@@ -572,9 +594,7 @@ function renderHome(){curViewFn=null;
       '<div class="ht-quote"><div class="ht-qlabel">📜 每日一句</div>'+
         '<div class="ht-qbody"><div class="quote" id="qtext"></div><div class="quotebar">'+quoteIcons()+'</div></div></div>'+
     '</div>'+
-    card('✅ 待办事项','查看看板',
-      '<div class="todoov"><div><div class="num">'+todoUn+'</div><div class="lbl">今日待完成</div></div>'+
-      '<button class="btn soft" style="margin-left:auto" onclick="openModule(\'待办事项\',todoView,bindTodo)">进入看板 ›</button></div>')+
+    card('✅ 待办事项','查看看板', todoHomeHtml())+
     '<div class="sec-title">速览</div>'+
     '<div class="grid">'+cd.map(coreCardHtml).join('')+'</div>'+
     card('🌤️ 心情记录','',moodHtml())+
@@ -744,12 +764,27 @@ function todoView(){const sts=['待处理','进行中','已完成'];
     '<div id="todobody"></div>','<button class="hiadd" onclick="addTodo()">＋</button>');
 }
 function bindTodo(){todoRender('看板');}
+function todoHomeHtml(){
+  const pend=DB.todos.filter(t=>t.status==='待处理');const show=pend.slice(0,3);let h='<div class="todo-home">';
+  if(show.length){h+=show.map(t=>'<div class="tmini" onclick="openModule(\'待办事项\',todoView,bindTodo)"><span class="tdot"></span>'+
+    '<span class="ttx">'+esc(t.title)+'</span>'+
+    (t.priority?'<span class="pill '+(t.priority==='高'?'h':t.priority==='中'?'m':'l')+'">'+t.priority+'</span>':'')+
+    (t.due?'<span class="pill due">📅'+fmtMD(t.due)+'</span>':'')+'</div>').join('');
+    if(pend.length>3)h+='<div class="tmore" onclick="openModule(\'待办事项\',todoView,bindTodo)">查看全部 '+pend.length+' 项 ›</div>';}
+  else{h+='<div class="tempty">暂无待处理事项 🎉</div>';}
+  h+='<button class="btn soft todo-go" onclick="openModule(\'待办事项\',todoView,bindTodo)">进入看板 ›</button></div>';return h;}
+function advanceTodo(id,e){if(e&&e.stopPropagation)e.stopPropagation();const t=DB.todos.find(x=>x.id===id);if(!t)return;
+  if(t.status==='待处理'){t.status='进行中';toast('已进行中');}
+  else if(t.status==='进行中'){t.status='已完成';t.doneDate=todayStr();toast('已完成');}
+  else return;save();todoRender('看板');}
 function todoToggle(v){document.querySelectorAll('[data-tv]').forEach(b=>b.classList.toggle('on',b.dataset.tv===v));todoRender(v);}
 function todoRender(v){const b=$('#todobody');if(!b)return;
-  if(v==='看板'){const sts=['待处理','进行中','已完成'];b.innerHTML='<div class="board">'+sts.map(s=>'<div class="col"><h4>'+s+'</h4>'+
-      DB.todos.filter(t=>t.status===s).map(t=>'<div class="todo" onclick="editTodo(\''+t.id+'\')"><div class="ti">'+esc(t.title)+'</div><div class="meta">'+
-      '<span class="pill '+(t.priority==='高'?'h':t.priority==='中'?'m':'l')+'">'+t.priority+'</span>'+
-      (t.cat?'<span>'+t.cat+'</span>':'')+(t.due?'<span>📅'+fmtMD(t.due)+'</span>':'')+'</div></div>').join('')+'</div>').join('')+'</div>';}
+  if(v==='看板'){const sts=['待处理','进行中','已完成'];b.innerHTML=sts.map(s=>{const list=DB.todos.filter(t=>t.status===s);
+    const items=list.length?list.map(t=>{const adv=s==='待处理'?'<div class="advance" onclick="advanceTodo(\''+t.id+'\',event)">➜</div>':s==='进行中'?'<div class="advance" onclick="advanceTodo(\''+t.id+'\',event)">➜</div>':'<div class="done-ic">✓</div>';
+      return '<div class="kbitem" onclick="editTodo(\''+t.id+'\')"><div class="kb-main"><div class="ti">'+esc(t.title)+'</div><div class="meta">'+
+      (t.priority?'<span class="pill '+(t.priority==='高'?'h':t.priority==='中'?'m':'l')+'">'+t.priority+'</span>':'')+
+      (t.cat?'<span class="pill">'+t.cat+'</span>':'')+(t.due?'<span class="pill due">📅'+fmtMD(t.due)+'</span>':'')+'</div></div>'+adv+'</div>';}).join(''):'<div class="empty">暂无</div>';
+    return '<div class="kbsec'+(s==='已完成'?' done':'')+'"><div class="kh"><span class="bar"></span>'+s+'<span class="cnt">'+list.length+'</span></div>'+items+'</div>';}).join('');}
   else{const y=new Date().getFullYear(),m=new Date().getMonth();const first=new Date(y,m,1).getDay();const days=new Date(y,m+1,0).getDate();
     let h='<div class="cal">';for(let i=0;i<first;i++)h+='<div></div>';
     for(let d=1;d<=days;d++){const ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');const has=DB.todos.some(t=>t.due===ds);
