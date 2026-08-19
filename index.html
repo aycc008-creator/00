@@ -946,7 +946,7 @@ function dietView(){const meals=['早餐','午餐','晚餐','加餐'];const mcls
     const mealHtml=meals.map(m=>{const ms=items.filter(x=>x.meal===m);if(!ms.length)return '';
       return '<div class="dmeal"><span class="dmk '+mcls[m]+'">'+m+'</span><div class="ditems">'+ms.map(d=>
         '<div class="ditem" onclick="editDiet(\''+d.id+'\')">'+(d.photo?'<img src="'+d.photo+'">':'<div class="dph">🍽️</div>')+
-        '<div class="dtxt"><div class="ddesc">'+esc(d.desc||d.meal)+'</div></div>'+(d.photo?'<span class="dflag">📷</span>':'')+'</div>').join('')+'</div>';}).join('');
+        '<div class="dtxt"><div class="ddesc">'+esc(d.desc||d.meal)+'</div></div>'+(d.photo?'<span class="dflag">📷</span>':'')+'</div>').join('')+'</div></div>';}).join('');
     return '<div class="dday"><div class="dtop"><span class="ddate">'+fmtMD(dt)+'</span><span class="dwk">'+w+'</span><span class="dcnt">'+items.length+' 餐</span></div>'+mealHtml+'</div>';}).join('');}
   return card('🍽️ 饮食记录','',body,'<button class="hiadd" onclick="addDiet()">＋</button>');}
 function bindDiet(){}
