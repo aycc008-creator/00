@@ -327,6 +327,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .swipe-actions .sa-del{background:#E2A8A0}
 .swipe-actions .sa-pin{background:#A9BFC9}
 .swipe-content{position:relative;z-index:2;background:var(--card);transition:transform .22s ease;will-change:transform;touch-action:pan-y;border-radius:14px;margin:0}
+
+/* 支线筛选与趋势 */
+.branchrange{display:flex;gap:8px;margin:2px 0 12px}
+.branchrange button{flex:1;padding:8px 0;border-radius:12px;background:var(--card);color:var(--ink2);border:1px solid var(--line);font-size:12.5px;font-weight:500;cursor:pointer}
+.branchrange button.on{background:var(--accent);color:#fff;border-color:transparent}
+.bcard .gv{font-size:13px;font-weight:700;color:var(--ink)}
+.bcard .btrend{width:100%;height:26px;margin-top:2px;display:block}
+
 </style>
 </head>
 <body>
@@ -769,20 +777,38 @@ const MODULES=[
   {k:'period',n:'经期',i:'🌸',c:'#D9C4C0'},{k:'countdown',n:'倒数日',i:'⏳',c:'#C9B0C2'},
   {k:'mood',n:'心情',i:'🌤️',c:'#BFC9A9'}
 ];
-function renderBranch(){curViewFn=null;const cards=MODULES.map(m=>{
-  const cnt=DB[m.k]?DB[m.k].length:0;
-  return '<div class="gcard" style="min-height:88px" onclick="openModule(\''+m.n+'\',()=>branchDash(\''+m.k+'\'),null)"><div class="gi">'+m.i+'</div><div class="gt">'+m.n+'</div><div class="gs">'+cnt+' 条记录 · 看板</div></div>';
+let branchRange='month';
+function branchRangeMatch(d){if(!d)return false;if(branchRange==='week'){const g=daysBetween(d,todayStr());return g>=0&&g<7;}if(branchRange==='year')return d.slice(0,4)===todayStr().slice(0,4);return d.slice(0,7)===todayStr().slice(0,7);}
+function branchRangeFilter(records,key){return records.filter(r=>branchRangeMatch(r[key]));}
+function setBranchRange(r){branchRange=r;renderBack();}
+function branchRangeBar(){const opts=[['week','本周'],['month','本月'],['year','本年']];return '<div class="branchrange">'+opts.map(o=>'<button class="'+(branchRange===o[0]?'on':'')+'" onclick="setBranchRange(\''+o[0]+'\')">'+o[1]+'</button>').join('')+'</div>';}
+function branchMeta(k){
+  const t=todayStr(),w=last7();let core='—',sub='';
+  if(k==='todos'){const done=DB.todos.filter(x=>x.status==='已完成').length;const total=DB.todos.length;core=total?Math.round(done/total*100)+'%':'0%';sub='待办 '+total+' 项 · 完成 '+done;return {core,sub,trend:w.map(d=>DB.todos.filter(x=>x.status==='已完成'&&x.doneDate===d).length)};}
+  if(k==='ledger'){const cur=branchRangeFilter(DB.ledger,'date');const eH=cur.filter(l=>l.type==='支出'&&l.cur==='HKD').reduce((s,l)=>s+(+l.amount||0),0);const eC=cur.filter(l=>l.type==='支出'&&l.cur==='CNY').reduce((s,l)=>s+(+l.amount||0),0);core=(eH?'HK$'+Math.round(eH):'HK$0')+(eC?' · ¥'+Math.round(eC):'');sub='支出 '+cur.length+' 笔';return {core,sub,trend:w.map(d=>DB.ledger.filter(l=>l.type==='支出'&&l.date===d).reduce((s,l)=>s+(+l.amount||0),0))};}
+  if(k==='diet'){const cur=branchRangeFilter(DB.diet,'date');core=cur.length+' 餐';sub='记录 '+new Set(cur.map(d=>d.date)).size+' 天';return {core,sub,trend:w.map(d=>DB.diet.filter(x=>x.date===d).length)};}
+  if(k==='sleep'){const cur=branchRangeFilter(DB.sleep,'date').filter(s=>s.dur);const avg=cur.length?cur.reduce((s,x)=>s+(+x.dur||0),0)/cur.length/60:0;core=avg?avg.toFixed(1)+'h':'—';sub='均睡 · '+cur.length+' 晚';return {core,sub,trend:w.map(d=>{const r=DB.sleep.find(s=>s.date===d&&s.dur);return r?(+r.dur)/60:0;})};}
+  if(k==='study'){const cur=branchRangeFilter(DB.study,'date');const tot=cur.reduce((s,x)=>s+(+x.dur||0),0);core=Math.floor(tot/60)+'h'+(tot%60?tot%60+'m':'');sub='总时长 · '+cur.length+' 次';return {core,sub,trend:w.map(d=>DB.study.filter(x=>x.date===d).reduce((s,x)=>s+(+x.dur||0),0))};}
+  if(k==='travel'){const cur=branchRangeFilter(DB.travel,'date');core=new Set(cur.map(x=>x.place).filter(Boolean)).size+' 城';sub='足迹 '+cur.length+' 处';return {core,sub,trend:w.map(d=>DB.travel.filter(x=>x.date===d).length)};}
+  if(k==='period'){const cur=branchRangeFilter(DB.period,'date');core=(DB.periodCycle||28)+' 天';sub='周期 · 记录 '+cur.length+' 天';return {core,sub,trend:w.map(d=>DB.period.filter(x=>x.date===d).length)};}
+  if(k==='countdown'){const up=DB.countdown.filter(c=>daysBetween(todayStr(),c.date)>=-1).length;core=up+' 个';sub='临近 · 共 '+DB.countdown.length+' 个';return {core,sub,trend:[up,up,up,up,up,up,up]};}
+  if(k==='mood'){const cur=branchRangeFilter(DB.mood,'date');core=cur.length+' 条';sub='共 '+DB.mood.length+' 条';return {core,sub,trend:w.map(d=>DB.mood.filter(x=>x.date===d).length)};}
+  return {core,sub,trend:[]};
+}
+function renderBranch(){curViewFn=null;const cards=MODULES.map(m=>{const meta=branchMeta(m.k);
+  return '<div class="gcard bcard" onclick="openModule(\''+m.n+'\',()=>branchDash(\''+m.k+'\'),null)"><div class="gi" style="background:'+m.c+'30">'+m.i+'</div><div class="gt">'+m.n+'</div><div class="gv">'+meta.core+'</div><div class="gs">'+meta.sub+'</div><canvas id="btr_'+m.k+'" class="btrend"></canvas></div>';
 }).join('');
-  $('#view').innerHTML='<div class="hi" style="margin:4px 2px 12px">🌿 支线 · 数据看板</div><div class="grid">'+cards+'</div>'+
+  $('#view').innerHTML='<div class="hi" style="margin:4px 2px 12px">🌿 支线 · 数据看板</div>'+branchRangeBar()+'<div class="grid">'+cards+'</div>'+
     card('📊 数据','',
       '<div style="display:flex;gap:10px"><button class="btn soft" style="flex:1" onclick="exportData()">导出备份</button><button class="btn soft" style="flex:1" onclick="importData()">导入备份</button></div>');
+  setTimeout(()=>MODULES.forEach(m=>{const cv=$('#btr_'+m.k);if(cv){const tr=branchMeta(m.k).trend;if(tr&&tr.length)miniTrend(cv,tr);}}),40);
 }
 function sumCards(arr){return '<div class="dashsum">'+arr.map(s=>'<div class="sc" style="background:linear-gradient(135deg,'+s[2]+'30,'+s[2]+'14)"><div class="sv">'+s[1]+'</div><div class="sl">'+s[0]+'</div></div>').join('')+'</div>';}
 function flowList(html){return '<div class="dashflow"><div class="fh">流水</div>'+(html||'<div class="empty">暂无记录</div>')+'</div>';}
 function branchDash(k){const m=MODULES.find(x=>x.k===k);if(!m)return '';
   const y=new Date().getFullYear(),mo=new Date().getMonth();const ym=y+'-'+String(mo+1).padStart(2,'0');
   let sum='',flow='',addFn='openModule(\''+m.n+'\','+m.k+'View,bind'+cap(m.k)+'())';
-  if(k==='ledger'){const cur=DB.ledger.filter(l=>l.date&&l.date.slice(0,7)===ym);
+  if(k==='ledger'){const cur=DB.ledger.filter(l=>branchRangeMatch(l.date));
     const eH=cur.filter(l=>l.type==='支出'&&l.cur==='HKD').reduce((s,l)=>s+(+l.amount||0),0);
     const iH=cur.filter(l=>l.type==='收入'&&l.cur==='HKD').reduce((s,l)=>s+(+l.amount||0),0);
     const eC=cur.filter(l=>l.type==='支出'&&l.cur==='CNY').reduce((s,l)=>s+(+l.amount||0),0);
@@ -791,24 +817,24 @@ function branchDash(k){const m=MODULES.find(x=>x.k===k);if(!m)return '';
     const list=[...DB.ledger].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
     flow=flowList(list.map(l=>'<div class="item" data-del="'+l.id+'" data-del-db="ledger" onclick="editLedger(\''+l.id+'\')"><div class="main"><div class="t">'+(l.type==='收入'?'+':'−')+(l.cur==='HKD'?'HK$':'¥')+Math.round(l.amount)+' · '+l.cat+(l.detail?(' · '+esc(l.detail)):'')+'</div><div class="s">'+(l.pay||'')+(l.owner?(' · '+l.owner):'')+' · '+fmtMD(l.date)+'</div></div></div>').join(''));
     addFn='chooseCurrency()';}
-  else if(k==='diet'){const cur=DB.diet.filter(d=>d.date&&d.date.slice(0,7)===ym);
+  else if(k==='diet'){const cur=DB.diet.filter(d=>branchRangeMatch(d.date));
     sum=sumCards([['本月餐数',cur.length+' 餐','#B7C7B4'],['记录天数',new Set(cur.map(d=>d.date)).size+' 天','#AEBFC9'],['累计',DB.diet.length+' 条','#C9A8A4']]);
     const list=[...DB.diet].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
     flow=flowList(list.map(d=>'<div class="item" data-del="'+d.id+'" data-del-db="diet"><div class="main"><div class="t">'+esc(d.meal||'餐')+(d.desc?(' · '+esc(d.desc.slice(0,22))):'')+'</div><div class="s">'+fmtMD(d.date)+'</div></div></div>').join(''));
     addFn='addDiet()';}
-  else if(k==='sleep'){const cur=DB.sleep.filter(s=>s.date&&s.date.slice(0,7)===ym&&s.dur);
+  else if(k==='sleep'){const cur=DB.sleep.filter(s=>branchRangeMatch(s.date)&&s.dur);
     const avg=cur.length?cur.reduce((s,x)=>s+(+x.dur||0),0)/cur.length/60:0;const ok=cur.filter(s=>(+s.dur||0)>=DB.sleepGoal*60).length;
     sum=sumCards([['本月均睡',avg?avg.toFixed(1)+'h':'—','#AEBFC9'],['达标天数',ok+' 天','#B7C7B4'],['记录',cur.length+' 晚','#C7BAD2']]);
     const list=[...DB.sleep].filter(s=>s.dur).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
     flow=flowList(list.map(s=>'<div class="item" data-del="'+s.id+'" data-del-db="sleep"><div class="main"><div class="t">'+fmtSleepDur(s.dur)+(s.note&&s.note.trim()?(' · '+esc(s.note.trim().slice(0,8))):'')+'</div><div class="s">'+(s.bed||'--')+'→'+(s.wake||'--')+' · '+fmtMD(s.date)+'</div></div></div>').join(''));
     addFn='openModule(\'睡眠\',sleepView,bindSleep)';}
-  else if(k==='study'){const cur=DB.study.filter(s=>s.date&&s.date.slice(0,7)===ym&&s.dur);
+  else if(k==='study'){const cur=DB.study.filter(s=>branchRangeMatch(s.date)&&s.dur);
     const tot=cur.reduce((s,x)=>s+(+x.dur||0),0);
     sum=sumCards([['本月学习',(Math.floor(tot/60))+'h'+(tot%60?(''+(tot%60)+'m'):''),'#C7BAD2'],['专注天数',cur.length+' 天','#B7C7B4'],['日均',cur.length?Math.round(tot/cur.length)+' 分':'—','#AEBFC9']]);
     const list=[...DB.study].filter(s=>s.dur).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
     flow=flowList(list.map(s=>'<div class="item" data-del="'+s.id+'" data-del-db="study"><div class="main"><div class="t">'+(+s.dur)+' 分'+(s.type?(' · '+esc(s.type)):'')+'</div><div class="s">'+fmtMD(s.date)+'</div></div></div>').join(''));
     addFn='openModule(\'学习\',studyView,bindStudy)';}
-  else if(k==='period'){const cur=DB.period.filter(p=>p.date&&p.date.slice(0,7)===ym);const pd=predictPeriod();
+  else if(k==='period'){const cur=DB.period.filter(p=>branchRangeMatch(p.date));const pd=predictPeriod();
     sum=sumCards([['本月经期',cur.length+' 天','#D9C4C0'],['下次预测',pd?pd.next:'先标记','#C9A8A4'],['周期',(DB.periodCycle||28)+' 天','#C7BAD2']]);
     const list=[...DB.period].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
     flow=flowList(list.map(p=>'<div class="item" data-del="'+p.date+'" data-del-db="period"><div class="main"><div class="t">🌸 经期记录</div><div class="s">'+fmtMD(p.date)+'</div></div></div>').join(''));
@@ -817,17 +843,17 @@ function branchDash(k){const m=MODULES.find(x=>x.k===k);if(!m)return '';
     sum=sumCards([['临近事件',up+' 个','#C9B0C2'],['总事件',list.length+' 个','#AEBFC9'],['最近',list.length?esc(list[0].c.name.slice(0,8)):'—','#C9A8A4']]);
     flow=flowList(list.slice(0,15).map(x=>'<div class="item" data-del="'+x.c.id+'" data-del-db="countdown" onclick="editCountdown(\''+x.c.id+'\')"><div class="main"><div class="t">'+esc(x.c.name)+'</div><div class="s">'+(x.c.note||'')+' · '+x.c.date+'</div></div><div style="font-size:18px;font-weight:700;color:var(--accent)">'+(x.d<0?'已至':x.d===0?'今天':x.d+'天')+'</div></div>').join(''));
     addFn='addCountdown()';}
-  else if(k==='mood'){const cur=DB.mood.filter(x=>x.date&&x.date.slice(0,7)===ym);
+  else if(k==='mood'){const cur=DB.mood.filter(x=>branchRangeMatch(x.date));
     sum=sumCards([['本月心情',cur.length+' 条','#BFC9A9'],['累计',DB.mood.length+' 条','#C7BAD2'],['最近',DB.mood.length?esc([...DB.mood].reverse()[0].text.slice(0,8)):'—','#C9A8A4']]);
     const list=[...DB.mood].reverse().slice(0,15);
     flow=flowList(list.map(x=>'<div class="item" data-del="'+x.id+'" data-del-db="mood"><div class="main"><div class="t">'+esc(x.text)+'</div><div class="s">'+fmtMD(x.date)+'</div></div></div>').join(''));
     addFn='openForm(\'记录心情\',[{k:\'text\',label:\'此刻的心情\',type:\'text\'}],{},v=>{DB.mood.push({id:uid(),date:todayStr(),text:v.text});save();renderBack();toast(\'已记录\');})';}
-  else if(k==='travel'){const cur=DB.travel.filter(t=>t.date&&t.date.slice(0,7)===ym);
+  else if(k==='travel'){const cur=DB.travel.filter(t=>branchRangeMatch(t.date));
     sum=sumCards([['本月足迹',cur.length+' 处','#A9BFC9'],['总足迹',DB.travel.length+' 处','#B7C7B4'],['省份',new Set(DB.travel.map(t=>t.prov).filter(Boolean)).size+' 个','#C9A8A4']]);
     const list=[...DB.travel].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,15);
     flow=flowList(list.map(t=>'<div class="item" data-del="'+t.id+'" data-del-db="travel" onclick="editTravel(\''+t.id+'\')"><div class="main"><div class="t">'+esc(t.place||'足迹')+'</div><div class="s">'+(t.prov||'')+' · '+fmtMD(t.date)+'</div></div></div>').join(''));
     addFn='travelAddPlace()';}
-  else{const comp=DB.todos.filter(t=>t.status==='已完成'&&t.doneDate&&t.doneDate.slice(0,7)===ym).length;
+  else{const comp=DB.todos.filter(t=>t.status==='已完成'&&branchRangeMatch(t.doneDate)).length;
     const ing=DB.todos.filter(t=>t.status==='进行中').length;const pend=DB.todos.filter(t=>t.status==='待处理').length;
     sum=sumCards([['本月完成',comp+' 项','#C9A8A4'],['进行中',ing+' 项','#AEBFC9'],['待处理',pend+' 项','#C7BAD2']]);
     const list=[...DB.todos].sort((a,b)=>(b.created||'').localeCompare(a.created||'')).slice(0,15);
@@ -1225,7 +1251,7 @@ function renderMonth(){curViewFn=null;const y=new Date().getFullYear(),m=new Dat
   const studyM=DB.study.filter(s=>s.date.slice(0,7)===ym).reduce((s,x)=>s+(+x.dur||0),0);
   const todosDone=DB.todos.filter(t=>t.status==='已完成').length;
   const moodN=DB.mood.filter(m=>m.date.slice(0,7)===ym).length;
-  const travN=DB.travel.filter(t=>t.date&&t.date.slice(0,7)===ym).length;
+  const travN=DB.travel.filter(t=>branchRangeMatch(t.date)).length;
   $('#view').innerHTML='<div class="hi" style="margin:4px 2px 6px">📖 月度回顾</div><div class="report">'+
     '<h2>'+y+' 年 '+(m+1)+' 月</h2>'+
     '<div class="card" style="box-shadow:none;background:var(--card2)">'+
