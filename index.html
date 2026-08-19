@@ -183,6 +183,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .todo .meta{font-size:11px;color:var(--ink2);margin-top:4px;display:flex;gap:5px;flex-wrap:wrap}
 /* 首页待办迷你列表 */
 .todo-home{display:flex;flex-direction:column;gap:6px}
+.todo-home .tcount{display:flex;gap:12px;font-size:11.5px;color:var(--ink2);margin-bottom:2px}
+.todo-home .tcount b{color:var(--accent);font-weight:700;font-size:13px;margin-left:2px}
 .todo-home .tmini{display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:11px;background:var(--card2);cursor:pointer}
 .todo-home .tdot{width:7px;height:7px;border-radius:50%;background:var(--pink2);flex:none}
 .todo-home .ttx{flex:1;min-width:0;font-size:12px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -765,7 +767,11 @@ function todoView(){const sts=['待处理','进行中','已完成'];
 }
 function bindTodo(){todoRender('看板');}
 function todoHomeHtml(){
-  const pend=DB.todos.filter(t=>t.status==='待处理');const show=pend.slice(0,3);let h='<div class="todo-home">';
+  const pend=DB.todos.filter(t=>t.status==='待处理');
+  const ing=DB.todos.filter(t=>t.status==='进行中').length;
+  const done=DB.todos.filter(t=>t.status==='已完成').length;
+  const show=pend.slice(0,3);let h='<div class="todo-home">';
+  h+='<div class="tcount"><span>待完成 <b>'+pend.length+'</b></span><span>进行中 <b>'+ing+'</b></span><span>已完成 <b>'+done+'</b></span></div>';
   if(show.length){h+=show.map(t=>'<div class="tmini" onclick="openModule(\'待办事项\',todoView,bindTodo)"><span class="tdot"></span>'+
     '<span class="ttx">'+esc(t.title)+'</span>'+
     (t.priority?'<span class="pill '+(t.priority==='高'?'h':t.priority==='中'?'m':'l')+'">'+t.priority+'</span>':'')+
