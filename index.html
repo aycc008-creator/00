@@ -636,7 +636,7 @@ function coreCards(){
   if(expH||expC){lg.v=(expC?'¥'+Math.round(expC):'¥0');lg.s=(expH?'HK$'+Math.round(expH):'HK$0')+' · 今日支出';}else{lg.v='¥0';lg.s='HK$0 · 今日支出';}
   let di={icon:'🥗',t:'饮食',bg:'gc-mint',click:"addDiet()"};
   const lastD=[...DB.diet].reverse()[0];
-  if(lastD){di.v=lastD.title||'最近一餐';di.s=lastD.meal||'最近一餐';}else{di.v='记录一餐';di.s='今日饮食';}
+  if(lastD){di.v=(lastD.desc&&lastD.desc.trim())?lastD.desc.trim().slice(0,18):(lastD.meal||'最近一餐');di.s=lastD.meal||'最近一餐';}else{di.v='记录一餐';di.s='今日饮食';}
   let sl={icon:'🌙',t:'睡眠',bg:'gc-blue',click:"openModule('睡眠',sleepView,bindSleep)"};
   const lastS=[...DB.sleep].reverse().find(s=>s.dur);
   if(lastS){const dur=parseFloat(lastS.dur)||0;const h=Math.floor(dur);const m=Math.round((dur-h)*60);
