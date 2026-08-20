@@ -1771,7 +1771,9 @@ function exportExcel(){
     xml+='</Table></Worksheet>';});
   xml+='</Workbook>';
   const blob=new Blob(['\ufeff'+xml],{type:'application/vnd.ms-excel'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Lynn数据备份-'+todayStr()+'.xls';a.click();
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Lynn数据备份-'+todayStr()+'.xls';
+  a.style.display='none';document.body.appendChild(a);a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(a.href);},300);
   toast('已导出 Excel（10 个工作表）');}
 function renderMe(){curViewFn=null;const p=DB.profile||{};
   if(!DB.createdAt){DB.createdAt=todayStr();save();}
