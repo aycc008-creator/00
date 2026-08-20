@@ -729,7 +729,7 @@ function drawChina(canvas,opts){
 <script>
 /* ============ 基础 ============ */
 const LS_KEY='lynn_v1';
-const DEF={pinHash:null,net:false,city:{name:'香港',lat:22.3193,lng:114.1694},todos:[],ledger:[],diet:[],sleep:[],study:[],travel:[],period:[],periodCycle:28,periodLen:5,periodMonths:3,countdown:[],mood:[],quotes_fav:[],news:[],news_read:[],news_collapsed:false,weather:null,sleepGoal:8,studyGoal:null,profile:null,homeOrder:null,createdAt:null};
+const DEF={pinHash:null,net:true,city:{name:'香港',lat:22.3193,lng:114.1694},todos:[],ledger:[],diet:[],sleep:[],study:[],travel:[],period:[],periodCycle:28,periodLen:5,periodMonths:3,countdown:[],mood:[],quotes_fav:[],news:[],news_read:[],news_collapsed:false,weather:null,sleepGoal:8,studyGoal:null,profile:null,homeOrder:null,createdAt:null};
 let DB=Object.assign({},DEF,JSON.parse(localStorage.getItem(LS_KEY)||'{}'));
 function save(){localStorage.setItem(LS_KEY,JSON.stringify(DB));}
 /* 睡眠时长迁移：旧版存小时小数（如 7.5），统一转为分钟整数（450） */
@@ -738,6 +738,9 @@ migrateSleep();
 /* 待办迁移：老数据已完成缺完成日期 → 补今天；有完成日期的补创建日期（让月度/年度有圆点数据） */
 function migrateTodos(){DB.todos.forEach(t=>{if(t.status==='已完成'){if(!t.doneDate)t.doneDate=todayStr();if(!t.created)t.created=t.doneDate;}});}
 migrateTodos();
+/* 联网迁移：旧版默认离线（net:false），现默认联网；用户主动切换过（netUser=true）则不干预 */
+function migrateNet(){if(!DB.netUser&&DB.net===false){DB.net=true;DB.netUser=true;save();}}
+migrateNet();
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function $(s){return document.querySelector(s);}
 function todayStr(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -1799,6 +1802,7 @@ function renderMe(){curViewFn=null;const p=DB.profile||{};
       '<div class="me-hint">点击头像拍照或从相册选择 · 点签名可修改</div></div>'+
     dashSec('设置')+
     '<div class="mecard setcard">'+
+      setRow('📡','联网状态',DB.net?'已开启（天气 / 地图 / 每日一句可加载）':'已关闭（更私密 · 天气不可用）',"toggleNet()")+
       setRow('🔐','修改密码','保护你的数据',"changePin()")+
       setRow('🏙️','修改城市','当前：'+(DB.city?DB.city.name:'—'),"setCity()")+
       setRow('🗂️','首页模块排序','拖拽调整首页组件顺序',"openModule('首页模块排序',sortView,bindSort)")+
@@ -1837,7 +1841,7 @@ function bindSort(){
 function changePin(){if(!DB.pinHash){setPinPrompt();return;}
   const old=prompt('请输入当前密码');if(old===null)return;if(!checkPin(old)){toast('当前密码错误');return;}setPinPrompt();}
 function setPinPrompt(){const p=prompt('设置新的四位数字密码');if(!p||!/^\d{4}$/.test(p)){toast('需为四位数字');return;}const p2=prompt('再次确认密码');if(p2!==p){toast('两次不一致');return;}setPin(p);toast('密码已更新');}
-function toggleNet(){DB.net=!DB.net;save();if(DB.net){loadWeather();loadNews();}else{DB.weather={offline:true};DB.news=[];save();}toast(DB.net?'已开启联网':'已切换为离线（更私密）');renderMe();if(curTab==='home')renderHome();}
+function toggleNet(){DB.net=!DB.net;DB.netUser=true;save();if(DB.net){loadWeather();loadNews();}else{DB.weather={offline:true};DB.news=[];save();}toast(DB.net?'已开启联网':'已切换为离线（更私密）');renderMe();if(curTab==='home')renderHome();}
 function setCity(){const n=prompt('城市名称（中英文皆可）',DB.city.name);if(!n)return;
   if(!DB.net){DB.city={name:n};save();toast('已设为 '+n+'（离线模式）');if(curTab==='home')renderHome();else renderMe();return;}
   fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(n)+'&count=1&language=zh').then(r=>r.json()).then(j=>{if(j.results&&j.results[0]){const g=j.results[0];DB.city={name:g.name,lat:g.latitude,lng:g.longitude};save();toast('已设为 '+g.name);if(curTab==='home')renderHome();else renderMe();loadWeather();}else toast('未找到该城市');}).catch(()=>toast('查询失败'));}
