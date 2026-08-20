@@ -425,9 +425,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .calhead2 h2{font-size:17px;font-weight:700;color:var(--ink);margin:0;flex:1;text-align:center}
 .calhead2 .back{width:36px;height:36px;border-radius:50%;background:var(--card);border:1px solid var(--line);font-size:16px;color:var(--ink2);cursor:pointer;flex:none}
 .calviewbar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.calseg{display:flex;background:rgba(140,133,122,.08);border-radius:10px;padding:3px}
-.calseg button{border:none;background:transparent;padding:6px 14px;font-size:12.5px;color:var(--ink2);border-radius:8px;cursor:pointer}
-.calseg button.on{background:var(--card);color:var(--accent);font-weight:600;box-shadow:0 1px 4px rgba(140,133,122,.15)}
 .calgo{margin-left:auto;border:none;background:var(--card);border:1px solid var(--line);color:var(--ink2);font-size:12px;padding:6px 12px;border-radius:9px;cursor:pointer}
 .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:10px}
 .calhead{display:contents}
@@ -448,9 +445,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .callegend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:12px;padding:10px 12px;background:var(--card);border-radius:12px;box-shadow:var(--shadow)}
 .clegend{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--ink2)}
 .cdot-per{width:9px;height:9px;border-radius:3px;background:#EBD3CF;display:inline-block}
-.calweekcell{aspect-ratio:auto;flex-direction:row;justify-content:flex-start;gap:10px;padding:8px 12px;min-height:44px;background:var(--card);box-shadow:var(--shadow)}
-.calweekcell .cald{font-size:13px;font-weight:600;width:70px;flex:none}
-.calweekcell .caldots{flex:1;justify-content:flex-start;margin-top:0}
 .calstat{position:fixed;left:0;right:0;bottom:calc(54px + var(--safe,0px));background:rgba(252,250,246,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;padding:10px 0;z-index:9}
 .csit{flex:1;text-align:center}
 .csv{font-size:13.5px;font-weight:700;color:var(--ink)}
@@ -1483,12 +1477,11 @@ function editTravel(id){const t=DB.travel.find(x=>x.id===id);if(!t)return;const 
 
 /* ============ 月报 ============ */
 /* ============ 月报 · 月历视图 ============ */
-const cal={y:new Date().getFullYear(),m:new Date().getMonth(),view:'month'};
+const cal={y:new Date().getFullYear(),m:new Date().getMonth()};
 function calYM(){return cal.y+'-'+String(cal.m+1).padStart(2,'0');}
 function calPrev(){cal.m--;if(cal.m<0){cal.m=11;cal.y--;}renderBack();}
 function calNext(){cal.m++;if(cal.m>11){cal.m=0;cal.y++;}renderBack();}
 function calTodayBtn(){cal.y=new Date().getFullYear();cal.m=new Date().getMonth();renderBack();}
-function calSetView(v){cal.view=v;renderBack();}
 function dayMarks(ds){const dots=[];
   if(DB.todos.some(t=>t.status==='已完成'&&t.doneDate===ds))dots.push('p');
   if(DB.ledger.some(l=>l.date===ds))dots.push('b');
@@ -1512,10 +1505,6 @@ function monthGrid(){const first=new Date(cal.y,cal.m,1);const startDow=first.ge
   for(let d=1;d<=days;d++){const ds=cal.y+'-'+String(cal.m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');h+=calCell(ds);}
   const rest=(startDow+days)%7;if(rest)for(let i=0;i<7-rest;i++)h+='<span class="calcell void"></span>';
   h+='</div>';return h;}
-function weekGrid(){const first=new Date(cal.y,cal.m,1);const dow=first.getDay()===0?7:first.getDay();const mon=new Date(first);mon.setDate(1-dow+1);
-  let h='<div class="calgrid"><div class="calhead">'+['一','二','三','四','五','六','日'].map(w=>'<span class="calwd">'+w+'</span>').join('')+'</div>';
-  for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(mon.getDate()+i);const ds=todayStr(d);h+='<div class="calcell calweekcell'+(ds.slice(0,7)!==calYM()?' dim':'')+'" onclick="dayDetail(\''+ds+'\')"><span class="cald">'+(+ds.slice(5,7))+'月'+(+ds.slice(8))+'日</span><div class="caldots">'+dayMarks(ds).dots.slice(0,6).map(x=>'<span class="cdot '+DOT_CLS[x]+'"></span>').join('')+(dayMarks(ds).travel?'<span class="cdot cdot-air">✈</span>':'')+'</div></div>';}
-  h+='</div>';return h;}
 function calStatBar(){const ym=calYM();const led=DB.ledger.filter(l=>l.date&&l.date.slice(0,7)===ym);
   const eH=sumA(led,'支出','HKD'),eC=sumA(led,'支出','CNY');
   const st=DB.study.filter(s=>s.date&&s.date.slice(0,7)===ym).reduce((a,x)=>a+(+x.dur||0),0);
@@ -1527,8 +1516,8 @@ function calStatBar(){const ym=calYM();const led=DB.ledger.filter(l=>l.date&&l.d
 function renderMonth(){curViewFn=null;
   const h='<div class="cal-swipe">'+
     '<div class="calhead2"><button class="back" onclick="calPrev()">‹</button><h2>'+cal.y+' 年 '+(cal.m+1)+' 月</h2><button class="back" onclick="calNext()">›</button></div>'+
-    '<div class="calviewbar"><div class="calseg">'+[['month','月'],['week','周']].map(v=>'<button class="'+(cal.view===v[0]?'on':'')+'" onclick="calSetView(\''+v[0]+'\')">'+v[1]+'视图</button>').join('')+'</div><button class="calgo" onclick="calTodayBtn()">回到今天</button></div>'+
-    (cal.view==='month'?monthGrid():weekGrid())+
+    '<div class="calviewbar"><button class="calgo" onclick="calTodayBtn()">回到今天</button></div>'+
+    monthGrid()+
     '<div class="callegend">'+[['p','待办','#C9A8A4'],['b','记账','#AEBFC9'],['d','饮食','#B7C7B4'],['s','学习','#C7BAD2'],['m','心情','#C9B0C2'],['z','睡眠','#C9C4BC'],['air','旅行','#A9BFC9'],['per','经期','#EBD3CF']].map(x=>'<span class="clegend"><i class="cdot '+(x[0]==='air'?'cdot-air':x[0]==='per'?'cdot-per':DOT_CLS[x[0]])+'"></i>'+x[1]+'</span>').join('')+'</div>'+
     '</div>'+calStatBar();
   $('#view').innerHTML=h;}
