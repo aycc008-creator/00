@@ -397,6 +397,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .bcell .amt{font-size:8.5px;color:var(--ink2);line-height:1.2;text-align:center;margin-top:1px}
 .bdots{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:2px}
 .bdots .bd{width:6px;height:6px;border-radius:50%;display:inline-block}
+.bd-p{background:#C9A8A4}
+.bd-b{background:#AEBFC9}
+.bd-g{background:#B7C7B4}
+.bcnt{min-width:16px;height:15px;line-height:15px;padding:0 4px;border-radius:8px;background:#C9B0C2;color:#fff;font-size:10px;font-weight:600;display:inline-block;text-align:center}
 .bair{font-size:10px;line-height:1;color:#8FA8B5}
 .blist{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:6px 14px}
 .lrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
@@ -1032,26 +1036,30 @@ function bTodosDay(ds){const pend=DB.todos.filter(t=>t.status==='待处理'&&t.c
   const rows=[...pend.map(t=>['待处理',esc(t.title)]),...ing.map(t=>['进行中',esc(t.title)]),...done.map(t=>['已完成',esc(t.title)])];
   if(!rows.length)return;bSheet(bFmt(ds)+' 待办',rows);}
 function bTodosY(){const y=bcur.y;
-  const months=[...Array(12)].map((_,m)=>{const ym=y+'-'+String(m+1).padStart(2,'0');return{created:DB.todos.filter(t=>t.created&&String(t.created).slice(0,7)===ym).length,done:DB.todos.filter(t=>t.status==='已完成'&&t.doneDate&&t.doneDate.slice(0,7)===ym).length};});
+  const months=[...Array(12)].map((_,m)=>{const ym=y+'-'+String(m+1).padStart(2,'0');return{created:DB.todos.filter(t=>t.created&&String(t.created).slice(0,7)===ym).length,done:DB.todos.filter(t=>t.status==='已完成'&&t.doneDate&&t.doneDate.slice(0,7)===ym).length,rec:DB.todos.filter(t=>(t.created&&String(t.created).slice(0,7)===ym)||(t.status==='已完成'&&t.doneDate&&t.doneDate.slice(0,7)===ym))};});
   const has=months.some(m=>m.created||m.done);
   let h=bNav(false);
-  if(!has){h+=bEmpty('该年暂无待办数据');return h;}
+  h+='<div class="btip">全年待办分布 · 点击月份查看该月待办明细</div>';
   const mx=Math.max(1,...months.map(m=>Math.max(m.created,m.done)));
-  h+='<div class="bpan"><canvas data-draw="bTodoY" id="bc_td" style="height:140px"></canvas></div>';
-  h+='<div class="ymap">'+months.map((m,i)=>'<div class="m"><div class="n">'+(i+1)+'月</div><div class="v">完成 '+m.done+' · 创建 '+m.created+'</div><div class="bar"><i style="width:'+(m.done/mx*100)+'%"></i></div></div>').join('')+'</div>';
+  if(has)h+='<div class="bpan"><canvas data-draw="bTodoY" id="bc_td" style="height:140px"></canvas></div>';
+  h+='<div class="ymap">'+months.map((m,i)=>'<div class="m" onclick="bTodoMonth('+(i+1)+')"><div class="n">'+(i+1)+'月</div><div class="v">完成 '+m.done+' · 创建 '+m.created+'</div><div class="bar"><i style="width:'+(m.done/mx*100)+'%"></i></div></div>').join('')+'</div>';
+  window._btm=months.map(m=>m.rec);
   window._btd=months.map(m=>m.done);
   return h;}
+function bTodoMonth(mi){const rec=window._btm[mi-1];if(!rec||!rec.length)return;bSheet(mi+' 月待办',rec.flatMap(t=>[['标题',esc(t.title)],['状态',t.status+(t.doneDate?(' · 完成 '+t.doneDate):'')],['创建',t.created||'—']]));}
 function bDrawTodoY(cv){bDrawBars(cv,[...Array(12)].map((_,i)=>(i+1)+'月'),window._btd,'#C9A8A4');}
 /* ================= 2 倒数日 ================= */
 function bCountF(){const list=DB.countdown.map(c=>({c,d:daysBetween(todayStr(),c.date)})).sort((a,b)=>(b.c.pin?1:0)-(a.c.pin?1:0)||a.d-b.d);
   return bNav(true)+'<div class="blist">'+(list.length?list.map(x=>'<div class="lrow"><div class="m"><div class="t">'+esc(x.c.name||'倒数日')+'</div><div class="s">目标 '+(x.c.date||'')+(x.c.note?(' · '+esc(x.c.note)):'')+(x.c.created?(' · 创建于 '+x.c.created):'')+'</div></div><div class="r">'+(x.d<0?'已过':x.d===0?'今天':x.d+' 天')+'</div></div>').join(''):bEmpty('暂无倒数事项'))+'</div>';}
 function bCountM(){const ym=bcur.ym;
-  return bNav(true)+bCal(ym,(ds,d,isT)=>{
+  let h=bNav(true)+bCal(ym,(ds,d,isT)=>{
     const list=DB.countdown.filter(c=>c.date===ds);
     if(!list.length)return '<div class="bcell'+(isT?' today':'')+'"><div class="d">'+d+'</div></div>';
-    return '<div class="bcell'+(isT?' today':'')+'" onclick="bCountDay(\''+ds+'\')"><div class="d">'+d+'</div><div class="bdots"><i class="bd" style="background:#C9B0C2" title="倒数"></i></div></div>';
-  });}
-function bCountDay(ds){const list=DB.countdown.filter(c=>c.date===ds);if(!list.length)return;bSheet(bFmt(ds)+' 倒数事项',list.map(c=>['名称',esc(c.name||'')],['目标日期',c.date],['剩余',(daysBetween(todayStr(),c.date)<0?'已过':daysBetween(todayStr(),c.date)+' 天')],['备注',c.note||'—']));}
+    return '<div class="bcell'+(isT?' today':'')+'" onclick="bCountDay(\''+ds+'\')"><div class="d">'+d+'</div><div class="bdots"><span class="bcnt">'+list.length+'</span></div></div>';
+  });
+  h+='<div class="btip"><span class="bcnt" style="vertical-align:middle;margin-right:4px">2</span> 数字为当日倒数事项数量 · 点击查看详情</div>';
+  return h;}
+function bCountDay(ds){const list=DB.countdown.filter(c=>c.date===ds);if(!list.length)return;bSheet(bFmt(ds)+' 倒数事项',list.flatMap(c=>[['名称',esc(c.name||'')],['目标日期',c.date],['剩余',(daysBetween(todayStr(),c.date)<0?'已过':daysBetween(todayStr(),c.date)+' 天')],['备注',c.note||'—']]));}
 function bCountY(){const y=+bcur.y;const yrs=[];for(let i=-5;i<=4;i++)yrs.push(y+i);
   const cnt=yrs.map(yy=>DB.countdown.filter(c=>c.date&&+c.date.slice(0,4)===yy).length);
   const has=cnt.some(n=>n>0);
@@ -1060,7 +1068,7 @@ function bCountY(){const y=+bcur.y;const yrs=[];for(let i=-5;i<=4;i++)yrs.push(y
   const mx=Math.max(1,...cnt);
   h+='<div class="bpan"><div class="pt">前后 5 年倒数事项分布</div><div class="yr10">'+yrs.map((yy,i)=>'<div class="y" onclick="bCountYList('+yy+')"><span class="cnt">'+cnt[i]+'</span><div class="bar" style="height:'+(cnt[i]?Math.max(6,cnt[i]/mx*90):2)+'px"></div><span class="lb">'+yy+'</span></div>').join('')+'</div></div>';
   return h;}
-function bCountYList(yy){const list=DB.countdown.filter(c=>c.date&&+c.date.slice(0,4)===yy);if(!list.length)return;bSheet(yy+' 年倒数事项',list.map(c=>['名称',esc(c.name||'')],['日期',c.date],['剩余',(daysBetween(todayStr(),c.date)<0?'已过':daysBetween(todayStr(),c.date)+' 天')]));}
+function bCountYList(yy){const list=DB.countdown.filter(c=>c.date&&+c.date.slice(0,4)===yy);if(!list.length)return;bSheet(yy+' 年倒数事项',list.flatMap(c=>[['名称',esc(c.name||'')],['日期',c.date],['剩余',(daysBetween(todayStr(),c.date)<0?'已过':daysBetween(todayStr(),c.date)+' 天')]]));}
 /* ================= 3 经期 ================= */
 function bPeriodF(){const starts=periodStarts();const plen=DB.periodLen||5;
   const rows=starts.map((s,i)=>{const e=new Date(s+'T00:00');e.setDate(e.getDate()+plen-1);return[s,bFmt(s)+' - '+bFmt(todayStr(e))+', '+plen+' 天'];}).reverse();
@@ -1076,9 +1084,9 @@ function bPeriodM(){const ym=bcur.ym;const pd=predictPeriod();const plen=DB.peri
   h+='<div class="btip"><i class="bd" style="background:#D9C4C0"></i>经期日　<span class="preddot"></span>预测经期日</div>';
   if(pd)h+='<div class="btip">下次经期预计 <b>'+pd.next+'</b>（还有 '+pd.days+' 天）</div>';
   return h;}
-function bPeriodDay(ds){bSheet(bFmt(ds)+' 经期','经期日'.split(','));}
+function bPeriodDay(ds){bSheet(bFmt(ds)+' 经期',[['标记','经期日']]);}
 function bPeriodY(){const y=bcur.y;
-  const months=[...Array(12)].map((_,m)=>{const ym=y+'-'+String(m+1).padStart(2,'0');const n=DB.period.filter(p=>p.date.slice(0,7)===ym).length;return{n};});
+  const months=[...Array(12)].map((_,m)=>{const ym=y+'-'+String(m+1).padStart(2,'0');const n=DB.period.filter(p=>p.date&&p.date.slice(0,7)===ym).length;return{n};});
   const has=months.some(m=>m.n>0);const starts=periodStarts();
   let avg='—';if(starts.length>1){let sum=0;for(let i=1;i<starts.length;i++)sum+=daysBetween(starts[i-1],starts[i]);avg=Math.round(sum/(starts.length-1))+' 天';}
   let h=bNav(false);
@@ -1099,7 +1107,7 @@ function bLedgerF(){const ym=bcur.ym;
 function bLedDay(ds){const rec=DB.ledger.filter(l=>l.date===ds);if(!rec.length)return;
   const eH=bLedSum(rec,'支出','HKD'),eC=bLedSum(rec,'支出','CNY'),iH=bLedSum(rec,'收入','HKD'),iC=bLedSum(rec,'收入','CNY');
   bSheet(bFmt(ds)+' 记账明细',[['支出',bMny(eH,eC)],['收入',bMny(iH,iC)],...rec.map(l=>[l.type==='收入'?'＋':'－',(l.cur==='HKD'?'HK$':'¥')+Math.round(l.amount)+' · '+esc(l.cat||'')+(l.detail?' · '+esc(l.detail):'')+(l.owner?' · '+l.owner:'')])]);}
-function bLedgerM(){const ym=bcur.ym,rec=DB.ledger.filter(l=>l.date.slice(0,7)===ym);
+function bLedgerM(){const ym=bcur.ym,rec=DB.ledger.filter(l=>l.date&&l.date.slice(0,7)===ym);
   const eH=bLedSum(rec,'支出','HKD'),eC=bLedSum(rec,'支出','CNY'),iH=bLedSum(rec,'收入','HKD'),iC=bLedSum(rec,'收入','CNY');
   const cat={};rec.filter(l=>l.type==='支出').forEach(l=>{const k=l.cat||'其他';cat[k]=cat[k]||{HKD:0,CNY:0};cat[k][l.cur]+=+l.amount||0;});
   const catArr=Object.entries(cat).sort((a,b)=>(b[1].HKD||0)+(b[1].CNY||0)-((a[1].HKD||0)+(a[1].CNY||0))).slice(0,6);
@@ -1119,7 +1127,7 @@ function bLedgerM(){const ym=bcur.ym,rec=DB.ledger.filter(l=>l.date.slice(0,7)==
   h+='<div class="bpan"><div class="pt">支付方式</div><div class="hbar">'+payArr.map(x=>bDualBar(x[0],x[1].HKD,x[1].CNY,hkMax,cnyMax)).join('')+'</div></div>';
   return h;}
 function bLedgerY(){const y=+bcur.y;const months=[];
-  for(let m=1;m<=12;m++){const ym=y+'-'+String(m).padStart(2,'0');const rec=DB.ledger.filter(l=>l.date.slice(0,7)===ym);
+  for(let m=1;m<=12;m++){const ym=y+'-'+String(m).padStart(2,'0');const rec=DB.ledger.filter(l=>l.date&&l.date.slice(0,7)===ym);
     const o={hp:0,hf:0,cp:0,cf:0};
     rec.filter(l=>l.type==='支出').forEach(l=>{const k=l.cur==='HKD'?(l.owner==='家庭'?'hf':'hp'):(l.owner==='家庭'?'cf':'cp');o[k]+=+l.amount||0;});
     months.push({m,rec,...o});}
@@ -1145,9 +1153,9 @@ function bDietM(){const ym=bcur.ym;
     const dot=(ml,cl)=>m.includes(ml)?'<i class="bd" style="background:'+cl+'" title="'+ml+'"></i>':'';
     return '<div class="bcell'+(isT?' today':'')+'" onclick="bDietDay(\''+ds+'\')"><div class="d">'+d+'</div><div class="bdots">'+dot('早餐','#B7C7B4')+dot('午餐','#AEBFC9')+dot('晚餐','#C7BAD2')+dot('加餐','#C9B0C2')+'</div></div>';
   });}
-function bDietDay(ds){const rec=DB.diet.filter(d=>d.date===ds);if(!rec.length)return;bSheet(bFmt(ds)+' 饮食',rec.map(d=>['餐次',esc(d.meal||'')],['内容',d.desc?esc(d.desc):'—'],['时间',d.time||'—']));}
+function bDietDay(ds){const rec=DB.diet.filter(d=>d.date===ds);if(!rec.length)return;bSheet(bFmt(ds)+' 饮食',rec.flatMap(d=>[['餐次',esc(d.meal||'')],['内容',d.desc?esc(d.desc):'—'],['时间',d.time||'—']]));}
 function bDietY(){const y=bcur.y;
-  const months=[...Array(12)].map((_,m)=>{const ym=y+'-'+String(m+1).padStart(2,'0');return{rec:DB.diet.filter(d=>d.date.slice(0,7)===ym)};});
+  const months=[...Array(12)].map((_,m)=>{const ym=y+'-'+String(m+1).padStart(2,'0');return{rec:DB.diet.filter(d=>d.date&&d.date.slice(0,7)===ym)};});
   const has=months.some(m=>m.rec.length);
   let h=bNav(false);
   if(!has){h+=bEmpty('该年暂无饮食记录');return h;}
@@ -1165,14 +1173,14 @@ function bSleepM(){const ym=bcur.ym;
     const s=DB.sleep.find(x=>x.date===ds&&x.dur);
     return '<div class="bcell'+(isT?' today':'')+'"'+(s?' onclick="bSleepDay(\''+ds+'\')"':'')+'><div class="d">'+d+'</div>'+(s?'<div class="sub">'+fmtSleepDur(s.dur)+'</div>':'')+'</div>';
   });
-  const w=[...Array(7)].map((_,i)=>{const dd=new Date(+ym.split('-')[0],+ym.split('-')[1]-1,+todayStr().slice(8)-6+i);const ds=bDstr(dd.getFullYear(),dd.getMonth()+1,dd.getDate());const s=DB.sleep.find(x=>x.date===ds&&x.dur);return s?s.dur:0;});
+  const w=[...Array(7)].map((_,i)=>{const t=new Date();t.setDate(t.getDate()-6+i);const ds=bDstr(t.getFullYear(),t.getMonth()+1,t.getDate());const s=DB.sleep.find(x=>x.date===ds&&x.dur);return s?s.dur:0;});
   window._bs7=w;
   h+='<div class="bpan"><div class="pt">近 7 天睡眠时长</div><canvas data-draw="bSleep7" id="bc_s7" style="height:120px"></canvas></div>';
   return h;}
 function bDrawSleep7(cv){const t=new Date();const lb=[...Array(7)].map((_,i)=>{const d=new Date(t);d.setDate(t.getDate()-6+i);return (d.getMonth()+1)+'/'+d.getDate();});bDrawBars(cv,lb,window._bs7,'#AEBFC9');}
 function bSleepDay(ds){const s=DB.sleep.find(x=>x.date===ds&&x.dur);if(!s)return;bSheet(bFmt(ds)+' 睡眠',[['入睡',s.bed||'—'],['起床',s.wake||'—'],['总时长',fmtSleepDur(s.dur)],['备注',s.note||'—']]);}
 function bSleepY(){const y=bcur.y;
-  const months=[...Array(12)].map((_,m)=>{const rec=DB.sleep.filter(s=>s.date.slice(0,7)===y+'-'+String(m+1).padStart(2,'0')&&s.dur);const avg=rec.length?rec.reduce((a,x)=>a+(+x.dur||0),0)/rec.length/60:0;const ok=rec.filter(x=>+x.dur>=((DB.sleepGoal||8)*60)).length;return{avg,ok,n:rec.length};});
+  const months=[...Array(12)].map((_,m)=>{const rec=DB.sleep.filter(s=>s.date&&s.date.slice(0,7)===y+'-'+String(m+1).padStart(2,'0')&&s.dur);const avg=rec.length?rec.reduce((a,x)=>a+(+x.dur||0),0)/rec.length/60:0;const ok=rec.filter(x=>+x.dur>=((DB.sleepGoal||8)*60)).length;return{avg,ok,n:rec.length};});
   const has=months.some(m=>m.n);
   let h=bNav(false);
   if(!has){h+=bEmpty('该年暂无睡眠记录');return h;}
@@ -1189,14 +1197,14 @@ function bStudyM(){const ym=bcur.ym;
     const rec=DB.study.filter(x=>x.date===ds&&x.dur);const tot=rec.reduce((a,x)=>a+(+x.dur||0),0);
     return '<div class="bcell'+(isT?' today':'')+'"'+(tot?' onclick="bStudyDay(\''+ds+'\')"':'')+'><div class="d">'+d+'</div>'+(tot?'<div class="sub">'+bHm(tot)+'</div>':'')+'</div>';
   });
-  const w=[...Array(7)].map((_,i)=>{const dd=new Date(+ym.split('-')[0],+ym.split('-')[1]-1,+todayStr().slice(8)-6+i);const ds=bDstr(dd.getFullYear(),dd.getMonth()+1,dd.getDate());return DB.study.filter(x=>x.date===ds).reduce((a,x)=>a+(+x.dur||0),0);});
+  const w=[...Array(7)].map((_,i)=>{const t=new Date();t.setDate(t.getDate()-6+i);const ds=bDstr(t.getFullYear(),t.getMonth()+1,t.getDate());return DB.study.filter(x=>x.date===ds).reduce((a,x)=>a+(+x.dur||0),0);});
   window._bst7=w;
   h+='<div class="bpan"><div class="pt">近 7 天学习时长</div><canvas data-draw="bStudy7" id="bc_st7" style="height:120px"></canvas></div>';
   return h;}
 function bDrawStudy7(cv){const t=new Date();const lb=[...Array(7)].map((_,i)=>{const d=new Date(t);d.setDate(t.getDate()-6+i);return (d.getMonth()+1)+'/'+d.getDate();});bDrawBars(cv,lb,window._bst7,'#C7BAD2');}
-function bStudyDay(ds){const rec=DB.study.filter(s=>s.date===ds&&s.dur);if(!rec.length)return;bSheet(bFmt(ds)+' 学习',rec.map(s=>['科目',esc(s.subject||s.type||'学习')],['类型',s.type||'—'],['时长',bHm(s.dur)],['专注度',s.focus||'—']));}
+function bStudyDay(ds){const rec=DB.study.filter(s=>s.date===ds&&s.dur);if(!rec.length)return;bSheet(bFmt(ds)+' 学习',rec.flatMap(s=>[['科目',esc(s.subject||s.type||'学习')],['类型',s.type||'—'],['时长',bHm(s.dur)],['专注度',s.focus||'—']]));}
 function bStudyY(){const y=bcur.y;
-  const months=[...Array(12)].map((_,m)=>{const ym=y+'-'+String(m+1).padStart(2,'0');return{rec:DB.study.filter(s=>s.date.slice(0,7)===ym&&s.dur)};});
+  const months=[...Array(12)].map((_,m)=>{const ym=y+'-'+String(m+1).padStart(2,'0');return{rec:DB.study.filter(s=>s.date&&s.date.slice(0,7)===ym&&s.dur)};});
   const has=months.some(m=>m.rec.length);
   let h=bNav(false);
   if(!has){h+=bEmpty('该年暂无学习记录');return h;}
@@ -1212,9 +1220,9 @@ function bMoodM(){const ym=bcur.ym;
     const n=DB.mood.filter(m=>m.date===ds).length;
     return '<div class="bcell'+(isT?' today':'')+'"'+(n?' onclick="bMoodDay(\''+ds+'\')"':'')+'><div class="d">'+d+'</div>'+(n?'<div class="sub">'+n+' 条</div>':'')+'</div>';
   });}
-function bMoodDay(ds){const rec=DB.mood.filter(m=>m.date===ds);if(!rec.length)return;bSheet(bFmt(ds)+' 心情',rec.map(m=>['心情',esc(m.text)],['时间',m.time||'—'],['备注',m.note||'—']));}
+function bMoodDay(ds){const rec=DB.mood.filter(m=>m.date===ds);if(!rec.length)return;bSheet(bFmt(ds)+' 心情',rec.flatMap(m=>[['心情',esc(m.text)],['时间',m.time||'—'],['备注',m.note||'—']]));}
 function bMoodY(){const y=bcur.y;
-  const months=[...Array(12)].map((_,m)=>{const ym=y+'-'+String(m+1).padStart(2,'0');return{rec:DB.mood.filter(x=>x.date.slice(0,7)===ym)};});
+  const months=[...Array(12)].map((_,m)=>{const ym=y+'-'+String(m+1).padStart(2,'0');return{rec:DB.mood.filter(x=>x.date&&x.date.slice(0,7)===ym)};});
   const has=months.some(m=>m.rec.length);
   let h=bNav(false);
   if(!has){h+=bEmpty('该年暂无心情记录');return h;}
@@ -1222,7 +1230,7 @@ function bMoodY(){const y=bcur.y;
   h+='<div class="ymap">'+months.map((m,i)=>'<div class="m" onclick="bMoodMonth('+(i+1)+')"><div class="n">'+(i+1)+'月</div><div class="v">'+m.rec.length+' 条</div><div class="bar"><i style="width:'+(m.rec.length/mx*100)+'%"></i></div></div>').join('')+'</div>';
   window._bmy=months.map(m=>m.rec);
   return h;}
-function bMoodMonth(mi){const rec=window._bmy[mi-1];if(!rec||!rec.length)return;bSheet(mi+' 月心情记录',rec.map(m=>['心情',esc(m.text)],['日期',m.date+(m.time?' '+m.time:'')]));}
+function bMoodMonth(mi){const rec=window._bmy[mi-1];if(!rec||!rec.length)return;bSheet(mi+' 月心情记录',rec.flatMap(m=>[['心情',esc(m.text)],['日期',m.date+(m.time?' '+m.time:'')]]));}
 /* ================= 9 旅行 ================= */
 function bTravelF(){const list=[...DB.travel].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
   return bNav(true)+'<div class="blist">'+(list.length?list.map(t=>'<div class="lrow"><div class="m"><div class="t">✈️ '+esc(t.place||'足迹')+'</div><div class="s">'+(t.prov?esc(t.prov)+' · ':'')+bFmt(t.date)+(t.note?(' · '+esc(t.note)):'')+'</div></div></div>').join(''):bEmpty('暂无旅行足迹'))+'</div>';}
@@ -1232,7 +1240,7 @@ function bTravelM(){const ym=bcur.ym;
     if(!list.length)return '<div class="bcell'+(isT?' today':'')+'"><div class="d">'+d+'</div></div>';
     return '<div class="bcell'+(isT?' today':'')+'" onclick="bTravelDay(\''+ds+'\')"><div class="d">'+d+'</div><div class="bdots"><span class="bair">✈</span></div></div>';
   });}
-function bTravelDay(ds){const list=DB.travel.filter(t=>t.date===ds);if(!list.length)return;bSheet(bFmt(ds)+' 旅行打卡',list.map(t=>['地点',esc(t.place||'')],['省份',t.prov||'—'],['备注',t.note||'—']));}
+function bTravelDay(ds){const list=DB.travel.filter(t=>t.date===ds);if(!list.length)return;bSheet(bFmt(ds)+' 旅行打卡',list.flatMap(t=>[['地点',esc(t.place||'')],['省份',t.prov||'—'],['备注',t.note||'—']]));}
 function bTravelY(){const y=bcur.y;const yr=DB.travel.filter(t=>t.date&&t.date.slice(0,4)===String(y));
   const cities=new Set(yr.map(t=>t.place).filter(Boolean)).size;const provs=new Set(yr.map(t=>t.prov).filter(Boolean)).size;
   const months=[...Array(12)].map((_,m)=>yr.filter(t=>t.date.slice(0,7)===y+'-'+String(m+1).padStart(2,'0')).length);
@@ -1334,7 +1342,7 @@ function addTodo(){openForm('新增待办',[
   {k:'cat',label:'分类',type:'select',options:['工作','个人','学习','杂务'],def:'个人'},
   {k:'due',label:'截止日期',type:'date',def:todayStr()},
   {k:'note',label:'备注',type:'textarea',def:''}
-],{},v=>{DB.todos.push(Object.assign({id:uid()},v));save();renderBack();toast('已添加');});}
+],{},v=>{DB.todos.push(Object.assign({id:uid(),created:todayStr(),createdTime:(function(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');})()},v));save();renderBack();toast('已添加');});}
 function editTodo(id){const t=DB.todos.find(x=>x.id===id);if(!t)return;openForm('编辑待办',[
   {k:'title',label:'任务名称',type:'text',def:t.title||''},
   {k:'priority',label:'优先级',type:'select',options:['高','中','低'],def:t.priority||'中'},
@@ -1342,7 +1350,7 @@ function editTodo(id){const t=DB.todos.find(x=>x.id===id);if(!t)return;openForm(
   {k:'cat',label:'分类',type:'select',options:['工作','个人','学习','杂务'],def:t.cat||'个人'},
   {k:'due',label:'截止日期',type:'date',def:t.due||''},
   {k:'note',label:'备注',type:'textarea',def:t.note||''}
-],{},v=>{Object.assign(t,v);save();renderBack();toast('已保存');},()=>{DB.todos=DB.todos.filter(x=>x.id!==id);save();renderBack();toast('已删除');});}
+],{},v=>{Object.assign(t,v);if(!t.created)t.created=todayStr();save();renderBack();toast('已保存');},()=>{DB.todos=DB.todos.filter(x=>x.id!==id);save();renderBack();toast('已删除');});}
 
 /* 记账 */
 function chooseCurrency(){openModal('<div class="sheet"><h3>记账 <span class="x" onclick="closeModal()">×</span></h3>'+
