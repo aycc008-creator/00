@@ -1197,6 +1197,53 @@ function bMonth(k){if(k==='ledger')return bLedgerM();if(k==='countdown')return b
 function bYear(k){if(k==='ledger')return bLedgerY();if(k==='countdown')return bCountY();if(k==='sleep')return bSleepY();if(k==='mood')return bMoodY();if(k==='travel')return bTravelY();return bEmpty('该组件无年度视图');}
 /* 流水底部导出 Excel（单个组件一个工作表） */
 function bExportBtn(k){return '<button class="btn soft" style="width:100%;margin-top:14px" onclick="bExport(\''+k+'\')">📤 导出 '+(BK[k]?BK[k][1]:k)+' Excel</button>';}
+/* ===== xlsx 生成（OOXML + ZIP stored，纯 JS 无依赖，Excel/WPS/iOS 原生支持） ===== */
+function escName(n){return String(n==null?'':n).replace(/[\\\/\?\*\[\]:]/g,'').slice(0,28)||'Sheet';}
+function xlsxSheetXml(header,rows){
+  const esc=v=>String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'&#10;').replace(/\r/g,'');
+  let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+  [header,...rows].forEach((r,ri)=>{x+='<row r="'+(ri+1)+'">'+r.map((c,ci)=>{const col=String.fromCharCode(65+ci);return '<c r="'+col+(ri+1)+'" t="inlineStr"'+(ri===0?' s="1"':'')+'><is><t xml:space="preserve">'+esc(c)+'</t></is></c>';}).join('')+'</row>';});
+  return x+'</sheetData></worksheet>';
+}
+var _CRCT=(function(){const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function _crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=_CRCT[(c^u8[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
+function _dv(u8,o,v){u8[o]=v&255;u8[o+1]=(v>>>8)&255;u8[o+2]=(v>>>16)&255;u8[o+3]=(v>>>24)&255;}
+function _zipStore(files){
+  const enc=new TextEncoder();const parts=[],cd=[];let offset=0;
+  files.forEach(f=>{
+    const nm=enc.encode(f.name),crc=_crc32(f.data);
+    const lh=new Uint8Array(30+nm.length);
+    _dv(lh,0,0x04034b50);_dv(lh,4,20);_dv(lh,6,0x0800);_dv(lh,8,0);_dv(lh,10,0);_dv(lh,12,0);_dv(lh,14,crc);_dv(lh,18,f.data.length);_dv(lh,22,f.data.length);_dv(lh,26,nm.length);_dv(lh,28,0);lh.set(nm,30);
+    parts.push(lh,f.data);
+    const ch=new Uint8Array(46+nm.length);
+    _dv(ch,0,0x02014b50);_dv(ch,4,20);_dv(ch,6,20);_dv(ch,8,0x0800);_dv(ch,10,0);_dv(ch,12,0);_dv(ch,14,0);_dv(ch,16,crc);_dv(ch,20,f.data.length);_dv(ch,24,f.data.length);_dv(ch,28,nm.length);_dv(ch,30,0);_dv(ch,32,0);_dv(ch,34,0);_dv(ch,36,0);_dv(ch,38,0);_dv(ch,42,offset);ch.set(nm,46);
+    cd.push(ch);offset+=lh.length+f.data.length;
+  });
+  const cdsz=cd.reduce((a,c)=>a+c.length,0),eocd=new Uint8Array(22);
+  _dv(eocd,0,0x06054b50);_dv(eocd,4,0);_dv(eocd,6,0);_dv(eocd,8,files.length);_dv(eocd,10,files.length);_dv(eocd,12,cdsz);_dv(eocd,16,offset);_dv(eocd,20,0);
+  const out=new Uint8Array(offset+cdsz+22);let p=0;
+  parts.forEach(b=>{out.set(b,p);p+=b.length;});cd.forEach(b=>{out.set(b,p);p+=b.length;});out.set(eocd,p);
+  return out;
+}
+function buildXlsx(sheets){
+  const enc=new TextEncoder();const files=[];
+  let ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>';
+  sheets.forEach((_,i)=>{ct+='<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';});
+  ct+='</Types>';
+  files.push({name:'[Content_Types].xml',data:enc.encode(ct)});
+  files.push({name:'_rels/.rels',data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')});
+  let wb='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>';
+  sheets.forEach((sh,i)=>{wb+='<sheet name="'+escName(sh.name)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>';});
+  wb+='</sheets></workbook>';
+  files.push({name:'xl/workbook.xml',data:enc.encode(wb)});
+  let rel='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+  sheets.forEach((_,i)=>{rel+='<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>';});
+  rel+='</Relationships>';
+  files.push({name:'xl/_rels/workbook.xml.rels',data:enc.encode(rel)});
+  files.push({name:'xl/styles.xml',data:enc.encode('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFB7A6C9"/></patternFill></fill></fills><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs></styleSheet>')});
+  sheets.forEach((sh,i)=>{files.push({name:'xl/worksheets/sheet'+(i+1)+'.xml',data:enc.encode(xlsxSheetXml(sh.header,sh.rows))});});
+  return _zipStore(files);
+}
 function bExport(k){
   const M={todos:['待办事项',['标题','状态','优先级','分类','创建日期','完成日期'],DB.todos.map(t=>[t.title||'',t.status||'',t.priority||'',t.cat||'',t.created||'',t.doneDate||''])],
     ledger:['记账',['日期','类型','币种','金额','分类','详情','支付方式','归属'],DB.ledger.map(l=>[l.date||'',l.type||'',l.cur||'',l.amount||'',l.cat||'',l.detail||'',l.pay||'',l.owner||''])],
@@ -1209,11 +1256,9 @@ function bExport(k){
     travel:['旅行足迹',['日期','地点','省份','备注'],DB.travel.map(t=>[t.date||'',t.place||'',t.prov||'',t.note||''])]}[k];
   if(!M)return;
   const[name,header,rows]=M;
-  let xml='<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="h"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#B7A6C9" ss:Pattern="Solid"/></Style></Styles><Worksheet ss:Name="'+name+'"><Table>';
-  [header,...rows].forEach((r,ri)=>{xml+='<Row>'+r.map(c=>'<Cell'+(ri===0?' ss:StyleID="h"':'')+'><Data ss:Type="String">'+String(c==null?'':c).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</Data></Cell>').join('')+'</Row>';});
-  xml+='</Table></Worksheet></Workbook>';
-  const blob=new Blob(['\ufeff'+xml],{type:'application/vnd.ms-excel'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name+'数据-'+todayStr()+'.xls';
+  const bin=buildXlsx([{name:name,header:header,rows:rows}]);
+  const blob=new Blob([bin],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name+'数据-'+todayStr()+'.xlsx';
   a.style.position='fixed';a.style.top='-9999px';a.style.left='-9999px';document.body.appendChild(a);a.click();
   setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(a.href);},300);
   toast('已导出 '+name+' Excel');
@@ -1733,14 +1778,9 @@ function exportExcel(){
     ['经期',[['日期'],DB.period.map(p=>[p.date])]],
     ['待办',[['标题','状态','优先级','完成日期'],DB.todos.map(t=>[t.title||'',t.status||'',t.priority||'',t.doneDate||''])]]
   ];
-  let xml='<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="h"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#B7A6C9" ss:Pattern="Solid"/></Style></Styles>';
-  sheets.forEach(sh=>{const nm=String(sh[0]).replace(/[^\w\u4e00-\u9fa5]/g,'').slice(0,20)||'Sheet';
-    xml+='<Worksheet ss:Name="'+nm+'"><Table>';
-    sh[1].forEach((r,ri)=>{xml+='<Row>'+r.map(c=>'<Cell'+(ri===0?' ss:StyleID="h"':'')+'><Data ss:Type="String">'+String(c==null?'':c).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</Data></Cell>').join('')+'</Row>';});
-    xml+='</Table></Worksheet>';});
-  xml+='</Workbook>';
-  const blob=new Blob(['\ufeff'+xml],{type:'application/vnd.ms-excel'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Lynn数据备份-'+todayStr()+'.xls';
+  const bin=buildXlsx(sheets.map(sh=>({name:sh[0],header:sh[1][0],rows:sh[1].slice(1)})));
+  const blob=new Blob([bin],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Lynn数据备份-'+todayStr()+'.xlsx';
   a.style.position='fixed';a.style.top='-9999px';a.style.left='-9999px';document.body.appendChild(a);a.click();
   setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(a.href);},300);
   toast('已导出 Excel（10 个工作表）');}
