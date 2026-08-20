@@ -735,6 +735,9 @@ function save(){localStorage.setItem(LS_KEY,JSON.stringify(DB));}
 /* 睡眠时长迁移：旧版存小时小数（如 7.5），统一转为分钟整数（450） */
 function migrateSleep(){DB.sleep.forEach(s=>{if(s.dur&&+s.dur>0&&+s.dur<=24){s.dur=Math.round(+s.dur*60);}});}
 migrateSleep();
+/* 待办迁移：老数据已完成缺完成日期 → 补今天；有完成日期的补创建日期（让月度/年度有圆点数据） */
+function migrateTodos(){DB.todos.forEach(t=>{if(t.status==='已完成'){if(!t.doneDate)t.doneDate=todayStr();if(!t.created)t.created=t.doneDate;}});}
+migrateTodos();
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function $(s){return document.querySelector(s);}
 function todayStr(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -981,7 +984,9 @@ function bFmt(ds){if(!ds)return'';const p=ds.split('-');return (+p[1])+'月'+(+p
 function bMny(h,c){let s='';if(h)s+='HK$'+Math.round(h);if(c)s+=(s?' · ':'')+'¥'+Math.round(c);return s||'—';}
 function bHm(m){m=Math.round(m||0);if(!m)return'0m';return m>=60?Math.floor(m/60)+'h'+(m%60?(' '+m%60+'m'):''):m+'m';}
 function bEmpty(t){return '<div class="bempty">'+t+'</div>';}
-function bSeg(){return '<div class="bseg">'+[['flow','流水'],['month','月度'],['year','年度']].map(v=>'<button class="'+(bcur.view===v[0]?'on':'')+'" onclick="bView(\''+v[0]+'\')">'+v[1]+'</button>').join('')+'</div>';}
+function bSeg(){const k=bcur.k;
+  const vs=k==='period'?[['flow','流水']]:k==='diet'||k==='study'?[['flow','流水'],['month','月度']]:[['flow','流水'],['month','月度'],['year','年度']];
+  return '<div class="bseg">'+vs.map(v=>'<button class="'+(bcur.view===v[0]?'on':'')+'" onclick="bView(\''+v[0]+'\')">'+v[1]+'</button>').join('')+'</div>';}
 function bNav(isMonth){
   if(isMonth){const[y,m]=bcur.ym.split('-').map(Number);return '<div class="bnav"><button onclick="bMv(-1)">‹</button><div class="nm">'+y+' 年 '+m+' 月</div><button onclick="bMv(1)">›</button></div>';}
   return '<div class="bnav"><button onclick="bYv(-1)">‹</button><div class="nm">'+bcur.y+' 年</div><button onclick="bYv(1)">›</button></div>';}
@@ -1074,26 +1079,7 @@ function bPeriodF(){const starts=periodStarts();const plen=DB.periodLen||5;
   const rows=starts.map((s,i)=>{const e=new Date(s+'T00:00');e.setDate(e.getDate()+plen-1);return[s,bFmt(s)+' - '+bFmt(todayStr(e))+', '+plen+' 天'];}).reverse();
   return bNav(true)+'<div class="blist">'+(rows.length?rows.map(r=>'<div class="lrow"><div class="m"><div class="t">🌸 经期</div><div class="s">'+r[1]+'</div></div></div>').join(''):bEmpty('暂无经期记录'))+'</div>'+
     '<div class="btip">经期列表按时间倒序展示每个周期的日期范围与持续天数。</div>';}
-function bPeriodM(){const ym=bcur.ym;const pd=predictPeriod();const plen=DB.periodLen||5;
-  let h=bNav(true)+bCal(ym,(ds,d,isT)=>{
-    const isP=DB.period.some(p=>p.date===ds);
-    let cls='bcell'+(isT?' today':'')+(isP?' period':'');
-    if(pd&&!isP){const nd=new Date(pd.next+'T00:00');for(let i=0;i<plen;i++){const x=new Date(nd);x.setDate(nd.getDate()+i);if(todayStr(x)===ds){cls+=' pred';break;}}}
-    return '<div class="'+cls+'"'+(isP?' onclick="bPeriodDay(\''+ds+'\')"':'')+'><div class="d">'+d+'</div>'+(isP?'<div class="bdots"><i class="bd" style="background:#D9C4C0"></i></div>':'')+'</div>';
-  });
-  h+='<div class="btip"><i class="bd" style="background:#D9C4C0"></i>经期日　<span class="preddot"></span>预测经期日</div>';
-  if(pd)h+='<div class="btip">下次经期预计 <b>'+pd.next+'</b>（还有 '+pd.days+' 天）</div>';
-  return h;}
 function bPeriodDay(ds){bSheet(bFmt(ds)+' 经期',[['标记','经期日']]);}
-function bPeriodY(){const y=bcur.y;
-  const months=[...Array(12)].map((_,m)=>{const ym=y+'-'+String(m+1).padStart(2,'0');const n=DB.period.filter(p=>p.date&&p.date.slice(0,7)===ym).length;return{n};});
-  const has=months.some(m=>m.n>0);const starts=periodStarts();
-  let avg='—';if(starts.length>1){let sum=0;for(let i=1;i<starts.length;i++)sum+=daysBetween(starts[i-1],starts[i]);avg=Math.round(sum/(starts.length-1))+' 天';}
-  let h=bNav(false);
-  if(!has){h+=bEmpty('该年暂无经期记录');return h;}
-  h+='<div class="bpan"><div class="pt">全年每月经期天数</div><div class="hbar">'+months.map((m,i)=>'<div class="hr"><span class="lb">'+(i+1)+'月</span><div class="tk"><div class="fl" style="width:'+(m.n/Math.max(1,...months.map(x=>x.n))*100)+'%;background:#D9C4C0"></div></div><span class="vv">'+m.n+' 天</span></div>').join('')+'</div></div>';
-  h+='<div class="bpan"><div class="pt">周期规律</div><div class="hbar"><div class="hr"><span class="lb">平均周期</span><div class="tk"><div class="fl" style="width:60%;background:#C9B0C2"></div></div><span class="vv">'+avg+'</span></div><div class="hr"><span class="lb">周期数</span><div class="tk"><div class="fl" style="width:40%;background:#D9C4C0"></div></div><span class="vv">'+Math.max(0,starts.length-1)+' 个</span></div></div></div>';
-  return h;}
 /* ================= 4 记账 ================= */
 function bLedSum(list,type,cur){return list.filter(l=>l.type===type&&l.cur===cur).reduce((s,l)=>s+(+l.amount||0),0);}
 function bLedgerF(){const ym=bcur.ym;
@@ -1146,25 +1132,16 @@ function bDietF(){const list=[...DB.diet].sort((a,b)=>String(b.date||'').localeC
   const byDate={};list.forEach(d=>{(byDate[d.date]=byDate[d.date]||[]).push(d);});
   return bNav(true)+'<div class="blist">'+(Object.keys(byDate).length?Object.keys(byDate).map(ds=>'<div class="dday2"><div class="dtop2">'+bFmt(ds)+'</div>'+byDate[ds].map(d=>'<div class="lrow"><div class="m"><div class="t">'+esc(d.meal||'餐')+(d.desc?(' · '+esc(d.desc)):'')+'</div><div class="s">'+(d.time?('时间 '+d.time):'')+'</div></div></div>').join('')+'</div>').join(''):bEmpty('暂无饮食记录'))+'</div>';}
 function bDietM(){const ym=bcur.ym;
-  return bNav(true)+bCal(ym,(ds,d,isT)=>{
+  let h=bNav(true)+bCal(ym,(ds,d,isT)=>{
     const rec=DB.diet.filter(x=>x.date===ds);
     if(!rec.length)return '<div class="bcell'+(isT?' today':'')+'"><div class="d">'+d+'</div></div>';
     const m=rec.map(x=>x.meal);
     const dot=(ml,cl)=>m.includes(ml)?'<i class="bd" style="background:'+cl+'" title="'+ml+'"></i>':'';
     return '<div class="bcell'+(isT?' today':'')+'" onclick="bDietDay(\''+ds+'\')"><div class="d">'+d+'</div><div class="bdots">'+dot('早餐','#B7C7B4')+dot('午餐','#AEBFC9')+dot('晚餐','#C7BAD2')+dot('加餐','#C9B0C2')+'</div></div>';
-  });}
-function bDietDay(ds){const rec=DB.diet.filter(d=>d.date===ds);if(!rec.length)return;bSheet(bFmt(ds)+' 饮食',rec.flatMap(d=>[['餐次',esc(d.meal||'')],['内容',d.desc?esc(d.desc):'—'],['时间',d.time||'—']]));}
-function bDietY(){const y=bcur.y;
-  const months=[...Array(12)].map((_,m)=>{const ym=y+'-'+String(m+1).padStart(2,'0');return{rec:DB.diet.filter(d=>d.date&&d.date.slice(0,7)===ym)};});
-  const has=months.some(m=>m.rec.length);
-  let h=bNav(false);
-  if(!has){h+=bEmpty('该年暂无饮食记录');return h;}
-  const mx=Math.max(1,...months.map(m=>m.rec.length));
-  h+='<div class="bpan"><div class="pt">全年每月饮食记录数</div><canvas data-draw="bDietYc" id="bc_dy" style="height:140px"></canvas></div>';
-  h+='<div class="ymap">'+months.map((m,i)=>'<div class="m"><div class="n">'+(i+1)+'月</div><div class="v">'+m.rec.length+' 餐</div><div class="bar"><i style="width:'+(m.rec.length/mx*100)+'%"></i></div></div>').join('')+'</div>';
-  window._bdy=months.map(m=>m.rec.length);
+  });
+  h+='<div class="btip"><b>圆点：</b><i class="bd" style="background:#B7C7B4"></i>早餐　<i class="bd" style="background:#AEBFC9"></i>午餐　<i class="bd" style="background:#C7BAD2"></i>晚餐　<i class="bd" style="background:#C9B0C2"></i>加餐</div>';
   return h;}
-function bDrawDietYc(cv){bDrawBars(cv,[...Array(12)].map((_,i)=>(i+1)+'月'),window._bdy,'#B7C7B4');}
+function bDietDay(ds){const rec=DB.diet.filter(d=>d.date===ds);if(!rec.length)return;bSheet(bFmt(ds)+' 饮食',rec.flatMap(d=>[['餐次',esc(d.meal||'')],['内容',d.desc?esc(d.desc):'—'],['时间',d.time||'—']]));}
 /* ================= 6 睡眠 ================= */
 function bSleepF(){const list=[...DB.sleep].filter(s=>s.dur).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
   return bNav(true)+'<div class="blist">'+(list.length?list.map(s=>'<div class="lrow"><div class="m"><div class="t">'+bFmt(s.date)+' · '+fmtSleepDur(s.dur)+'</div><div class="s">'+(s.bed||'--')+' → '+(s.wake||'--')+(s.note?(' · '+esc(s.note)):'')+'</div></div><div class="r'+(s.note?' g':'')+'">'+(+s.dur>=((DB.sleepGoal||8)*60)?'达标':'')+'</div></div>').join(''):bEmpty('暂无睡眠记录'))+'</div>';}
@@ -1180,15 +1157,12 @@ function bSleepM(){const ym=bcur.ym;
 function bDrawSleep7(cv){const t=new Date();const lb=[...Array(7)].map((_,i)=>{const d=new Date(t);d.setDate(t.getDate()-6+i);return (d.getMonth()+1)+'/'+d.getDate();});bDrawBars(cv,lb,window._bs7,'#AEBFC9');}
 function bSleepDay(ds){const s=DB.sleep.find(x=>x.date===ds&&x.dur);if(!s)return;bSheet(bFmt(ds)+' 睡眠',[['入睡',s.bed||'—'],['起床',s.wake||'—'],['总时长',fmtSleepDur(s.dur)],['备注',s.note||'—']]);}
 function bSleepY(){const y=bcur.y;
-  const months=[...Array(12)].map((_,m)=>{const rec=DB.sleep.filter(s=>s.date&&s.date.slice(0,7)===y+'-'+String(m+1).padStart(2,'0')&&s.dur);const avg=rec.length?rec.reduce((a,x)=>a+(+x.dur||0),0)/rec.length/60:0;const ok=rec.filter(x=>+x.dur>=((DB.sleepGoal||8)*60)).length;return{avg,ok,n:rec.length};});
+  const months=[...Array(12)].map((_,m)=>{const rec=DB.sleep.filter(s=>s.date&&s.date.slice(0,7)===y+'-'+String(m+1).padStart(2,'0')&&s.dur);const ok=rec.filter(x=>+x.dur>=((DB.sleepGoal||8)*60)).length;return{ok,n:rec.length};});
   const has=months.some(m=>m.n);
   let h=bNav(false);
   if(!has){h+=bEmpty('该年暂无睡眠记录');return h;}
-  window._bsy=months.map(m=>+(m.avg.toFixed(1)));
-  h+='<div class="bpan"><div class="pt">全年每月平均睡眠时长（小时）</div><canvas data-draw="bSleepYc" id="bc_sy" style="height:140px"></canvas></div>';
   h+='<div class="bpan"><div class="pt">每月达标天数（≥'+(DB.sleepGoal||8)+'h）</div><div class="hbar">'+months.map((m,i)=>'<div class="hr"><span class="lb">'+(i+1)+'月</span><div class="tk"><div class="fl" style="width:'+(m.n?m.ok/m.n*100:0)+'%;background:#AEBFC9"></div></div><span class="vv">'+m.ok+'/'+m.n+' 天</span></div>').join('')+'</div></div>';
   return h;}
-function bDrawSleepYc(cv){bDrawBars(cv,[...Array(12)].map((_,i)=>(i+1)+'月'),window._bsy,'#AEBFC9');}
 /* ================= 7 学习 ================= */
 function bStudyF(){const list=[...DB.study].filter(s=>s.dur).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
   return bNav(true)+'<div class="blist">'+(list.length?list.map(s=>'<div class="lrow"><div class="m"><div class="t">'+esc(s.subject||s.type||'学习')+' · '+bHm(s.dur)+'</div><div class="s">'+(s.type?esc(s.type)+' · ':'')+(s.focus?esc(s.focus)+' · ':'')+bFmt(s.date)+(s.note?(' · '+esc(s.note)):'')+'</div></div></div>').join(''):bEmpty('暂无学习记录'))+'</div>';}
@@ -1203,15 +1177,6 @@ function bStudyM(){const ym=bcur.ym;
   return h;}
 function bDrawStudy7(cv){const t=new Date();const lb=[...Array(7)].map((_,i)=>{const d=new Date(t);d.setDate(t.getDate()-6+i);return (d.getMonth()+1)+'/'+d.getDate();});bDrawBars(cv,lb,window._bst7,'#C7BAD2');}
 function bStudyDay(ds){const rec=DB.study.filter(s=>s.date===ds&&s.dur);if(!rec.length)return;bSheet(bFmt(ds)+' 学习',rec.flatMap(s=>[['科目',esc(s.subject||s.type||'学习')],['类型',s.type||'—'],['时长',bHm(s.dur)],['专注度',s.focus||'—']]));}
-function bStudyY(){const y=bcur.y;
-  const months=[...Array(12)].map((_,m)=>{const ym=y+'-'+String(m+1).padStart(2,'0');return{rec:DB.study.filter(s=>s.date&&s.date.slice(0,7)===ym&&s.dur)};});
-  const has=months.some(m=>m.rec.length);
-  let h=bNav(false);
-  if(!has){h+=bEmpty('该年暂无学习记录');return h;}
-  window._bsy2=months.map(m=>m.rec.reduce((a,x)=>a+(+x.dur||0),0));
-  h+='<div class="bpan"><div class="pt">全年每月学习总时长</div><canvas data-draw="bStudyYc" id="bc_sty" style="height:140px"></canvas></div>';
-  return h;}
-function bDrawStudyYc(cv){bDrawBars(cv,[...Array(12)].map((_,i)=>(i+1)+'月'),window._bsy2,'#C7BAD2');}
 /* ================= 8 心情 ================= */
 function bMoodF(){const list=[...DB.mood].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
   return bNav(true)+'<div class="blist">'+(list.length?list.map(m=>'<div class="lrow"><div class="m"><div class="t">'+esc(m.text)+'</div><div class="s">'+bFmt(m.date)+(m.time?(' · '+m.time):'')+(m.note?(' · '+esc(m.note)):'')+'</div></div></div>').join(''):bEmpty('暂无心情记录'))+'</div>';}
@@ -1255,9 +1220,9 @@ function bTravelY(){const y=bcur.y;const yr=DB.travel.filter(t=>t.date&&t.date.s
   return h;}
 /* ================= 入口 ================= */
 function bFlow(k){return k==='todos'?bTodosF():k==='ledger'?bLedgerF():k==='countdown'?bCountF():k==='period'?bPeriodF():k==='diet'?bDietF():k==='sleep'?bSleepF():k==='study'?bStudyF():k==='mood'?bMoodF():bTravelF();}
-function bMonth(k){return k==='todos'?bTodosM():k==='ledger'?bLedgerM():k==='countdown'?bCountM():k==='period'?bPeriodM():k==='diet'?bDietM():k==='sleep'?bSleepM():k==='study'?bStudyM():k==='mood'?bMoodM():bTravelM();}
-function bYear(k){return k==='todos'?bTodosY():k==='ledger'?bLedgerY():k==='countdown'?bCountY():k==='period'?bPeriodY():k==='diet'?bDietY():k==='sleep'?bSleepY():k==='study'?bStudyY():k==='mood'?bMoodY():bTravelY();}
-function bDraw(k){if(k==='todos'){const c=$('#bc_td');if(c)bDrawTodoY(c);}else if(k==='ledger'){const c=$('#bc_y4');if(c)bDrawLedY(c);}else if(k==='diet'){const c=$('#bc_dy');if(c)bDrawDietYc(c);}else if(k==='sleep'){const c=$('#bc_s7');if(c)bDrawSleep7(c);const c2=$('#bc_sy');if(c2)bDrawSleepYc(c2);}else if(k==='study'){const c=$('#bc_st7');if(c)bDrawStudy7(c);const c2=$('#bc_sty');if(c2)bDrawStudyYc(c2);}}
+function bMonth(k){if(k==='todos')return bTodosM();if(k==='ledger')return bLedgerM();if(k==='countdown')return bCountM();if(k==='diet')return bDietM();if(k==='sleep')return bSleepM();if(k==='study')return bStudyM();if(k==='mood')return bMoodM();if(k==='travel')return bTravelM();return bEmpty('该组件无月度视图');}
+function bYear(k){if(k==='todos')return bTodosY();if(k==='ledger')return bLedgerY();if(k==='countdown')return bCountY();if(k==='sleep')return bSleepY();if(k==='mood')return bMoodY();if(k==='travel')return bTravelY();return bEmpty('该组件无年度视图');}
+function bDraw(k){if(k==='todos'){const c=$('#bc_td');if(c)bDrawTodoY(c);}else if(k==='ledger'){const c=$('#bc_y4');if(c)bDrawLedY(c);}else if(k==='sleep'){const c=$('#bc_s7');if(c)bDrawSleep7(c);}else if(k==='study'){const c=$('#bc_st7');if(c)bDrawStudy7(c);}}
 function renderBranch(){
   curViewFn=null;
   if(!bcur){
@@ -1350,7 +1315,7 @@ function editTodo(id){const t=DB.todos.find(x=>x.id===id);if(!t)return;openForm(
   {k:'cat',label:'分类',type:'select',options:['工作','个人','学习','杂务'],def:t.cat||'个人'},
   {k:'due',label:'截止日期',type:'date',def:t.due||''},
   {k:'note',label:'备注',type:'textarea',def:t.note||''}
-],{},v=>{Object.assign(t,v);if(!t.created)t.created=todayStr();save();renderBack();toast('已保存');},()=>{DB.todos=DB.todos.filter(x=>x.id!==id);save();renderBack();toast('已删除');});}
+],{},v=>{Object.assign(t,v);if(!t.created)t.created=todayStr();if(t.status==='已完成'&&!t.doneDate)t.doneDate=todayStr();save();renderBack();toast('已保存');},()=>{DB.todos=DB.todos.filter(x=>x.id!==id);save();renderBack();toast('已删除');});}
 
 /* 记账 */
 function chooseCurrency(){openModal('<div class="sheet"><h3>记账 <span class="x" onclick="closeModal()">×</span></h3>'+
