@@ -985,7 +985,7 @@ function bMny(h,c){let s='';if(h)s+='HK$'+Math.round(h);if(c)s+=(s?' · ':'')+'�
 function bHm(m){m=Math.round(m||0);if(!m)return'0m';return m>=60?Math.floor(m/60)+'h'+(m%60?(' '+m%60+'m'):''):m+'m';}
 function bEmpty(t){return '<div class="bempty">'+t+'</div>';}
 function bSeg(){const k=bcur.k;
-  const vs=k==='period'?[['flow','流水']]:k==='diet'||k==='study'?[['flow','流水'],['month','月度']]:[['flow','流水'],['month','月度'],['year','年度']];
+  const vs=k==='period'||k==='todos'?[['flow','流水']]:k==='diet'||k==='study'?[['flow','流水'],['month','月度']]:[['flow','流水'],['month','月度'],['year','年度']];
   return '<div class="bseg">'+vs.map(v=>'<button class="'+(bcur.view===v[0]?'on':'')+'" onclick="bView(\''+v[0]+'\')">'+v[1]+'</button>').join('')+'</div>';}
 function bNav(isMonth){
   if(isMonth){const[y,m]=bcur.ym.split('-').map(Number);return '<div class="bnav"><button onclick="bMv(-1)">‹</button><div class="nm">'+y+' 年 '+m+' 月</div><button onclick="bMv(1)">›</button></div>';}
@@ -1026,33 +1026,6 @@ function bTodoDur(t){if(!t.created||!t.doneDate)return'';const a=new Date(String
 function bTodosF(){const list=[...DB.todos].sort((a,b)=>String(b.created||'').localeCompare(String(a.created||'')));
   return bNav(true)+'<div class="blist">'+(list.length?list.map(t=>'<div class="lrow"><div class="m"><div class="t">'+esc(t.title)+' <span class="pill '+(t.priority==='高'?'':t.priority==='中'?'m':'l')+'">'+(t.priority||'中')+'</span></div><div class="s">'+esc(t.cat||'')+(t.due?(' · 截止 '+t.due):'')+(t.note?(' · '+esc(t.note)):'')+(t.doneDate?(' · 完成于 '+t.doneDate):'')+'</div></div><div class="r'+(t.status==='已完成'?' g':'')+'">'+(t.status==='已完成'?(bTodoDur(t)||'已完成'):t.status)+'</div></div>').join(''):bEmpty('暂无待办事项'))+'</div>'+
     '<div class="btip">已完成事项右侧显示<b>历时</b>（创建 → 完成，如「3天2小时」）。</div>';}
-function bTodosM(){const ym=bcur.ym;
-  let h=bNav(true)+bCal(ym,(ds,d,isT)=>{
-    const pend=DB.todos.filter(t=>t.status==='待处理'&&t.created&&String(t.created).slice(0,10)===ds).length;
-    const ing=DB.todos.filter(t=>t.status==='进行中'&&t.created&&String(t.created).slice(0,10)===ds).length;
-    const done=DB.todos.filter(t=>t.status==='已完成'&&t.doneDate===ds).length;
-    if(!pend&&!ing&&!done)return '<div class="bcell'+(isT?' today':'')+'"><div class="d">'+d+'</div></div>';
-    const dots=(pend?'<i class="bd bd-p" title="待处理"></i>':'')+(ing?'<i class="bd bd-b" title="进行中"></i>':'')+(done?'<i class="bd bd-g" title="已完成"></i>':'');
-    return '<div class="bcell'+(isT?' today':'')+'" onclick="bTodosDay(\''+ds+'\')"><div class="d">'+d+'</div><div class="bdots">'+dots+'</div></div>';
-  });
-  h+='<div class="btip"><b>圆点：</b><i class="bd" style="background:#C9A8A4"></i>待处理　<i class="bd" style="background:#AEBFC9"></i>进行中　<i class="bd" style="background:#B7C7B4"></i>已完成</div>';
-  return h;}
-function bTodosDay(ds){const pend=DB.todos.filter(t=>t.status==='待处理'&&t.created&&String(t.created).slice(0,10)===ds);const ing=DB.todos.filter(t=>t.status==='进行中'&&t.created&&String(t.created).slice(0,10)===ds);const done=DB.todos.filter(t=>t.status==='已完成'&&t.doneDate===ds);
-  const rows=[...pend.map(t=>['待处理',esc(t.title)]),...ing.map(t=>['进行中',esc(t.title)]),...done.map(t=>['已完成',esc(t.title)])];
-  if(!rows.length)return;bSheet(bFmt(ds)+' 待办',rows);}
-function bTodosY(){const y=bcur.y;
-  const months=[...Array(12)].map((_,m)=>{const ym=y+'-'+String(m+1).padStart(2,'0');return{created:DB.todos.filter(t=>t.created&&String(t.created).slice(0,7)===ym).length,done:DB.todos.filter(t=>t.status==='已完成'&&t.doneDate&&t.doneDate.slice(0,7)===ym).length,rec:DB.todos.filter(t=>(t.created&&String(t.created).slice(0,7)===ym)||(t.status==='已完成'&&t.doneDate&&t.doneDate.slice(0,7)===ym))};});
-  const has=months.some(m=>m.created||m.done);
-  let h=bNav(false);
-  h+='<div class="btip">全年待办分布 · 点击月份查看该月待办明细</div>';
-  const mx=Math.max(1,...months.map(m=>Math.max(m.created,m.done)));
-  if(has)h+='<div class="bpan"><canvas data-draw="bTodoY" id="bc_td" style="height:140px"></canvas></div>';
-  h+='<div class="ymap">'+months.map((m,i)=>'<div class="m" onclick="bTodoMonth('+(i+1)+')"><div class="n">'+(i+1)+'月</div><div class="v">完成 '+m.done+' · 创建 '+m.created+'</div><div class="bar"><i style="width:'+(m.done/mx*100)+'%"></i></div></div>').join('')+'</div>';
-  window._btm=months.map(m=>m.rec);
-  window._btd=months.map(m=>m.done);
-  return h;}
-function bTodoMonth(mi){const rec=window._btm[mi-1];if(!rec||!rec.length)return;bSheet(mi+' 月待办',rec.flatMap(t=>[['标题',esc(t.title)],['状态',t.status+(t.doneDate?(' · 完成 '+t.doneDate):'')],['创建',t.created||'—']]));}
-function bDrawTodoY(cv){bDrawBars(cv,[...Array(12)].map((_,i)=>(i+1)+'月'),window._btd,'#C9A8A4');}
 /* ================= 2 倒数日 ================= */
 function bCountF(){const list=DB.countdown.map(c=>({c,d:daysBetween(todayStr(),c.date)})).sort((a,b)=>(b.c.pin?1:0)-(a.c.pin?1:0)||a.d-b.d);
   return bNav(true)+'<div class="blist">'+(list.length?list.map(x=>'<div class="lrow"><div class="m"><div class="t">'+esc(x.c.name||'倒数日')+'</div><div class="s">目标 '+(x.c.date||'')+(x.c.note?(' · '+esc(x.c.note)):'')+(x.c.created?(' · 创建于 '+x.c.created):'')+'</div></div><div class="r">'+(x.d<0?'已过':x.d===0?'今天':x.d+' 天')+'</div></div>').join(''):bEmpty('暂无倒数事项'))+'</div>';}
@@ -1220,9 +1193,32 @@ function bTravelY(){const y=bcur.y;const yr=DB.travel.filter(t=>t.date&&t.date.s
   return h;}
 /* ================= 入口 ================= */
 function bFlow(k){return k==='todos'?bTodosF():k==='ledger'?bLedgerF():k==='countdown'?bCountF():k==='period'?bPeriodF():k==='diet'?bDietF():k==='sleep'?bSleepF():k==='study'?bStudyF():k==='mood'?bMoodF():bTravelF();}
-function bMonth(k){if(k==='todos')return bTodosM();if(k==='ledger')return bLedgerM();if(k==='countdown')return bCountM();if(k==='diet')return bDietM();if(k==='sleep')return bSleepM();if(k==='study')return bStudyM();if(k==='mood')return bMoodM();if(k==='travel')return bTravelM();return bEmpty('该组件无月度视图');}
-function bYear(k){if(k==='todos')return bTodosY();if(k==='ledger')return bLedgerY();if(k==='countdown')return bCountY();if(k==='sleep')return bSleepY();if(k==='mood')return bMoodY();if(k==='travel')return bTravelY();return bEmpty('该组件无年度视图');}
-function bDraw(k){if(k==='todos'){const c=$('#bc_td');if(c)bDrawTodoY(c);}else if(k==='ledger'){const c=$('#bc_y4');if(c)bDrawLedY(c);}else if(k==='sleep'){const c=$('#bc_s7');if(c)bDrawSleep7(c);}else if(k==='study'){const c=$('#bc_st7');if(c)bDrawStudy7(c);}}
+function bMonth(k){if(k==='ledger')return bLedgerM();if(k==='countdown')return bCountM();if(k==='diet')return bDietM();if(k==='sleep')return bSleepM();if(k==='study')return bStudyM();if(k==='mood')return bMoodM();if(k==='travel')return bTravelM();return bEmpty('该组件无月度视图');}
+function bYear(k){if(k==='ledger')return bLedgerY();if(k==='countdown')return bCountY();if(k==='sleep')return bSleepY();if(k==='mood')return bMoodY();if(k==='travel')return bTravelY();return bEmpty('该组件无年度视图');}
+/* 流水底部导出 Excel（单个组件一个工作表） */
+function bExportBtn(k){return '<button class="btn soft" style="width:100%;margin-top:14px" onclick="bExport(\''+k+'\')">📤 导出 '+(BK[k]?BK[k][1]:k)+' Excel</button>';}
+function bExport(k){
+  const M={todos:['待办事项',['标题','状态','优先级','分类','创建日期','完成日期'],DB.todos.map(t=>[t.title||'',t.status||'',t.priority||'',t.cat||'',t.created||'',t.doneDate||''])],
+    ledger:['记账',['日期','类型','币种','金额','分类','详情','支付方式','归属'],DB.ledger.map(l=>[l.date||'',l.type||'',l.cur||'',l.amount||'',l.cat||'',l.detail||'',l.pay||'',l.owner||''])],
+    countdown:['倒数日',['名称','目标日期','备注','创建时间'],DB.countdown.map(c=>[c.name||'',c.date||'',c.note||'',c.created||''])],
+    period:['经期',['日期'],DB.period.map(p=>[p.date||''])],
+    diet:['饮食记录',['日期','餐次','内容','时间'],DB.diet.map(d=>[d.date||'',d.meal||'',d.desc||'',d.time||''])],
+    sleep:['睡眠记录',['日期','入睡','起床','时长分钟','备注'],DB.sleep.map(s=>[s.date||'',s.bed||'',s.wake||'',s.dur||'',s.note||''])],
+    study:['学习记录',['日期','科目','类型','时长分钟','专注度','备注'],DB.study.map(s=>[s.date||'',s.subject||'',s.type||'',s.dur||'',s.focus||'',s.note||''])],
+    mood:['心情记录',['日期','时间','内容','备注'],DB.mood.map(m=>[m.date||'',m.time||'',m.text||'',m.note||''])],
+    travel:['旅行足迹',['日期','地点','省份','备注'],DB.travel.map(t=>[t.date||'',t.place||'',t.prov||'',t.note||''])]}[k];
+  if(!M)return;
+  const[name,header,rows]=M;
+  let xml='<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="h"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#B7A6C9" ss:Pattern="Solid"/></Style></Styles><Worksheet ss:Name="'+name+'"><Table>';
+  [header,...rows].forEach((r,ri)=>{xml+='<Row>'+r.map(c=>'<Cell'+(ri===0?' ss:StyleID="h"':'')+'><Data ss:Type="String">'+String(c==null?'':c).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</Data></Cell>').join('')+'</Row>';});
+  xml+='</Table></Worksheet></Workbook>';
+  const blob=new Blob(['\ufeff'+xml],{type:'application/vnd.ms-excel'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name+'数据-'+todayStr()+'.xls';
+  a.style.display='none';document.body.appendChild(a);a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(a.href);},300);
+  toast('已导出 '+name+' Excel');
+}
+function bDraw(k){if(k==='ledger'){const c=$('#bc_y4');if(c)bDrawLedY(c);}else if(k==='sleep'){const c=$('#bc_s7');if(c)bDrawSleep7(c);}else if(k==='study'){const c=$('#bc_st7');if(c)bDrawStudy7(c);}}
 function renderBranch(){
   curViewFn=null;
   if(!bcur){
@@ -1255,7 +1251,7 @@ function renderBranch(){
   }
   const k=bcur.k;
   let body='';
-  if(bcur.view==='flow')body=bFlow(k);
+  if(bcur.view==='flow')body=bFlow(k)+bExportBtn(k);
   else if(bcur.view==='month')body=bMonth(k);
   else body=bYear(k);
   $('#view').innerHTML='<div class="subhdr"><button class="back" onclick="bcur=null;renderBranch()">‹</button><h2>'+BK[k][0]+' '+BK[k][1]+'</h2></div>'+bSeg()+body;
