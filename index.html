@@ -1143,7 +1143,7 @@ function bSleepY(){const y=bcur.y;
   return h;}
 /* ================= 7 学习 ================= */
 function bStudyF(){const list=[...DB.study].filter(s=>s.dur).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
-  return bNav(true)+'<div class="blist">'+(list.length?list.map(s=>'<div class="lrow" data-del="'+s.id+'" data-del-db="study"><div class="m"><div class="t">'+esc(s.subject||s.type||'学习')+' · '+bHm(s.dur)+'</div><div class="s">'+(s.type?esc(s.type)+' · ':'')+(s.focus?esc(s.focus)+' · ':'')+bFmt(s.date)+(s.note?(' · '+esc(s.note)):'')+'</div></div></div>').join(''):bEmpty('暂无学习记录'))+'</div>';}
+  return bNav(true)+'<div class="blist">'+(list.length?list.map(s=>'<div class="lrow" data-del="'+s.id+'" data-del-db="study"><div class="m"><div class="t">'+esc(s.subject||s.type||'学习')+' · '+bHm(s.dur)+'</div><div class="s">'+(s.start&&s.end?(s.start+'–'+s.end+' · '):'')+(s.type?esc(s.type)+' · ':'')+(s.focus?esc(s.focus)+' · ':'')+bFmt(s.date)+(s.note?(' · '+esc(s.note)):'')+'</div></div></div>').join(''):bEmpty('暂无学习记录'))+'</div>';}
 function bStudyM(){const ym=bcur.ym;
   let h=bNav(true)+bCal(ym,(ds,d,isT)=>{
     const rec=DB.study.filter(x=>x.date===ds&&x.dur);const tot=rec.reduce((a,x)=>a+(+x.dur||0),0);
@@ -1154,7 +1154,7 @@ function bStudyM(){const ym=bcur.ym;
   h+='<div class="bpan"><div class="pt">近 7 天学习时长</div><canvas data-draw="bStudy7" id="bc_st7" style="height:120px"></canvas></div>';
   return h;}
 function bDrawStudy7(cv){const t=new Date();const lb=[...Array(7)].map((_,i)=>{const d=new Date(t);d.setDate(t.getDate()-6+i);return (d.getMonth()+1)+'/'+d.getDate();});bDrawBars(cv,lb,window._bst7,'#C7BAD2');}
-function bStudyDay(ds){const rec=DB.study.filter(s=>s.date===ds&&s.dur);if(!rec.length)return;bSheet(bFmt(ds)+' 学习',rec.flatMap(s=>[['科目',esc(s.subject||s.type||'学习')],['类型',s.type||'—'],['时长',bHm(s.dur)],['专注度',s.focus||'—']]));}
+function bStudyDay(ds){const rec=DB.study.filter(s=>s.date===ds&&s.dur);if(!rec.length)return;bSheet(bFmt(ds)+' 学习',rec.flatMap(s=>[['科目',esc(s.subject||s.type||'学习')],['类型',s.type||'—'],['时间',(s.start&&s.end)?(s.start+' – '+s.end):'—'],['时长',bHm(s.dur)],['专注度',s.focus||'—']]));}
 /* ================= 8 心情 ================= */
 function bMoodF(){const list=[...DB.mood].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
   return bNav(true)+'<div class="blist">'+(list.length?list.map(m=>'<div class="lrow" data-del="'+m.id+'" data-del-db="mood"><div class="m"><div class="t">'+esc(m.text)+'</div><div class="s">'+bFmt(m.date)+(m.time?(' · '+m.time):'')+(m.note?(' · '+esc(m.note)):'')+'</div></div></div>').join(''):bEmpty('暂无心情记录'))+'</div>';}
@@ -1551,12 +1551,18 @@ function renderStudyList(){const t=todayStr();const list=pinSort(DB.study.filter
 function manualStudy(){
   openForm('📚 手动添加学习',[
     {k:'date',label:'日期',type:'date',def:todayStr()},
-    {k:'dur',label:'时长（分钟）',type:'num',def:60},
+    {k:'start',label:'开始时间（可选）',type:'time',def:''},
+    {k:'end',label:'结束时间（可选）',type:'time',def:''},
+    {k:'dur',label:'时长（分钟）· 填时间自动算',type:'num',def:60},
     {k:'subject',label:'内容 / 科目',type:'text',placeholder:'例如：高数 第三章'},
     {k:'type',label:'学习类型',type:'select',options:['阅读','网课','实操','复习','写作'],def:'阅读'},
     {k:'focus',label:'专注度',type:'select',options:['高度','中度','低度'],def:'高度'},
     {k:'note',label:'笔记链接（可选）',type:'text',placeholder:'https://…'}
-  ],{},v=>{DB.study.push({id:uid(),date:v.date,subject:(v.subject||'').trim(),type:v.type,focus:v.focus,dur:+v.dur||0,note:(v.note||'').trim()});save();renderBack();toast('已记录 '+fmtSleepDur(+v.dur||0));});
+  ],{},v=>{
+    let dur=+v.dur||0;
+    if(v.start&&v.end){const hm=t=>{const p=String(t).split(':');return (+p[0]||0)*60+(+p[1]||0);};let diff=hm(v.end)-hm(v.start);if(diff<0)diff+=1440;if(diff>0)dur=diff;}
+    dur=Math.max(0,Math.round(dur));
+    DB.study.push({id:uid(),date:v.date,subject:(v.subject||'').trim(),type:v.type,focus:v.focus,dur:dur,note:(v.note||'').trim(),start:(v.start||''),end:(v.end||'')});save();renderBack();toast('已记录 '+fmtSleepDur(dur));});
 }
 
 /* 经期 */
