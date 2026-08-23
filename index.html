@@ -1029,11 +1029,11 @@ function bDualBar(label,hk,cny,hkMax,cnyMax){return '<div class="hr"><span class
 /* ================= 1 待办 ================= */
 function bTodoDur(t){if(!t.created||!t.doneDate)return'';const a=new Date(String(t.created).slice(0,10)+'T'+(t.createdTime||'00:00')),b=new Date(t.doneDate+'T'+(t.doneTime||'00:00'));const min=Math.max(0,Math.round((b-a)/60000));const d=Math.floor(min/1440),h=Math.floor((min%1440)/60),m=min%60;let s='';if(d)s+=d+'天';if(h||d)s+=h+'小时';if(m||(!d&&!h))s+=m+'分';return s;}
 function bTodosF(){const list=[...DB.todos].sort((a,b)=>String(b.created||'').localeCompare(String(a.created||'')));
-  return bNav(true)+'<div class="blist">'+(list.length?list.map(t=>'<div class="lrow"><div class="m"><div class="t">'+esc(t.title)+' <span class="pill '+(t.priority==='高'?'':t.priority==='中'?'m':'l')+'">'+(t.priority||'中')+'</span></div><div class="s">'+esc(t.cat||'')+(t.due?(' · 截止 '+t.due):'')+(t.note?(' · '+esc(t.note)):'')+(t.doneDate?(' · 完成于 '+t.doneDate):'')+'</div></div><div class="r'+(t.status==='已完成'?' g':'')+'">'+(t.status==='已完成'?(bTodoDur(t)||'已完成'):t.status)+'</div></div>').join(''):bEmpty('暂无待办事项'))+'</div>'+
+  return bNav(true)+'<div class="blist">'+(list.length?list.map(t=>'<div class="lrow" data-del="'+t.id+'" data-del-db="todo"><div class="m"><div class="t">'+esc(t.title)+' <span class="pill '+(t.priority==='高'?'':t.priority==='中'?'m':'l')+'">'+(t.priority||'中')+'</span></div><div class="s">'+esc(t.cat||'')+(t.due?(' · 截止 '+t.due):'')+(t.note?(' · '+esc(t.note)):'')+(t.doneDate?(' · 完成于 '+t.doneDate):'')+'</div></div><div class="r'+(t.status==='已完成'?' g':'')+'">'+(t.status==='已完成'?(bTodoDur(t)||'已完成'):t.status)+'</div></div>').join(''):bEmpty('暂无待办事项'))+'</div>'+
     '<div class="btip">已完成事项右侧显示<b>历时</b>（创建 → 完成，如「3天2小时」）。</div>';}
 /* ================= 2 倒数日 ================= */
 function bCountF(){const list=DB.countdown.map(c=>({c,d:daysBetween(todayStr(),c.date)})).sort((a,b)=>(b.c.pin?1:0)-(a.c.pin?1:0)||a.d-b.d);
-  return bNav(true)+'<div class="blist">'+(list.length?list.map(x=>'<div class="lrow"><div class="m"><div class="t">'+esc(x.c.name||'倒数日')+'</div><div class="s">目标 '+(x.c.date||'')+(x.c.note?(' · '+esc(x.c.note)):'')+(x.c.created?(' · 创建于 '+x.c.created):'')+'</div></div><div class="r">'+(x.d<0?'已过':x.d===0?'今天':x.d+' 天')+'</div></div>').join(''):bEmpty('暂无倒数事项'))+'</div>';}
+  return bNav(true)+'<div class="blist">'+(list.length?list.map(x=>'<div class="lrow" data-del="'+x.c.id+'" data-del-db="countdown"><div class="m"><div class="t">'+esc(x.c.name||'倒数日')+'</div><div class="s">目标 '+(x.c.date||'')+(x.c.note?(' · '+esc(x.c.note)):'')+(x.c.created?(' · 创建于 '+x.c.created):'')+'</div></div><div class="r">'+(x.d<0?'已过':x.d===0?'今天':x.d+' 天')+'</div></div>').join(''):bEmpty('暂无倒数事项'))+'</div>';}
 function bCountM(){const ym=bcur.ym;
   let h=bNav(true)+bCal(ym,(ds,d,isT)=>{
     const list=DB.countdown.filter(c=>c.date===ds);
@@ -1055,7 +1055,7 @@ function bCountYList(yy){const list=DB.countdown.filter(c=>c.date&&+c.date.slice
 /* ================= 3 经期 ================= */
 function bPeriodF(){const starts=periodStarts();const plen=DB.periodLen||5;
   const rows=starts.map((s,i)=>{const e=new Date(s+'T00:00');e.setDate(e.getDate()+plen-1);return[s,bFmt(s)+' - '+bFmt(todayStr(e))+', '+plen+' 天'];}).reverse();
-  return bNav(true)+'<div class="blist">'+(rows.length?rows.map(r=>'<div class="lrow"><div class="m"><div class="t">🌸 经期</div><div class="s">'+r[1]+'</div></div></div>').join(''):bEmpty('暂无经期记录'))+'</div>'+
+  return bNav(true)+'<div class="blist">'+(rows.length?rows.map(r=>'<div class="lrow" data-del="'+r[0]+'" data-del-db="period"><div class="m"><div class="t">🌸 经期</div><div class="s">'+r[1]+'</div></div></div>').join(''):bEmpty('暂无经期记录'))+'</div>'+
     '<div class="btip">经期列表按时间倒序展示每个周期的日期范围与持续天数。</div>';}
 function bPeriodDay(ds){bSheet(bFmt(ds)+' 经期',[['标记','经期日']]);}
 /* ================= 4 记账 ================= */
@@ -1108,7 +1108,7 @@ function bDrawLedY(cv){const M=window._bly;bDrawStack2(cv,M.map(m=>m.m+'月'),M.
 /* ================= 5 饮食 ================= */
 function bDietF(){const list=[...DB.diet].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
   const byDate={};list.forEach(d=>{(byDate[d.date]=byDate[d.date]||[]).push(d);});
-  return bNav(true)+'<div class="blist">'+(Object.keys(byDate).length?Object.keys(byDate).map(ds=>'<div class="dday2"><div class="dtop2">'+bFmt(ds)+'</div>'+byDate[ds].map(d=>'<div class="lrow"><div class="m"><div class="t">'+esc(d.meal||'餐')+(d.desc?(' · '+esc(d.desc)):'')+'</div><div class="s">'+(d.time?('时间 '+d.time):'')+'</div></div></div>').join('')+'</div>').join(''):bEmpty('暂无饮食记录'))+'</div>';}
+  return bNav(true)+'<div class="blist">'+(Object.keys(byDate).length?Object.keys(byDate).map(ds=>'<div class="dday2"><div class="dtop2">'+bFmt(ds)+'</div>'+byDate[ds].map(d=>'<div class="lrow" data-del="'+d.id+'" data-del-db="diet"><div class="m"><div class="t">'+esc(d.meal||'餐')+(d.desc?(' · '+esc(d.desc)):'')+'</div><div class="s">'+(d.time?('时间 '+d.time):'')+'</div></div></div>').join('')+'</div>').join(''):bEmpty('暂无饮食记录'))+'</div>';}
 function bDietM(){const ym=bcur.ym;
   let h=bNav(true)+bCal(ym,(ds,d,isT)=>{
     const rec=DB.diet.filter(x=>x.date===ds);
@@ -1122,7 +1122,7 @@ function bDietM(){const ym=bcur.ym;
 function bDietDay(ds){const rec=DB.diet.filter(d=>d.date===ds);if(!rec.length)return;bSheet(bFmt(ds)+' 饮食',rec.flatMap(d=>[['餐次',esc(d.meal||'')],['内容',d.desc?esc(d.desc):'—'],['时间',d.time||'—']]));}
 /* ================= 6 睡眠 ================= */
 function bSleepF(){const list=[...DB.sleep].filter(s=>s.dur).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
-  return bNav(true)+'<div class="blist">'+(list.length?list.map(s=>'<div class="lrow"><div class="m"><div class="t">'+bFmt(s.date)+' · '+fmtSleepDur(s.dur)+'</div><div class="s">'+(s.bed||'--')+' → '+(s.wake||'--')+(s.note?(' · '+esc(s.note)):'')+'</div></div><div class="r'+(s.note?' g':'')+'">'+(+s.dur>=((DB.sleepGoal||8)*60)?'达标':'')+'</div></div>').join(''):bEmpty('暂无睡眠记录'))+'</div>';}
+  return bNav(true)+'<div class="blist">'+(list.length?list.map(s=>'<div class="lrow" data-del="'+s.id+'" data-del-db="sleep"><div class="m"><div class="t">'+bFmt(s.date)+' · '+fmtSleepDur(s.dur)+'</div><div class="s">'+(s.bed||'--')+' → '+(s.wake||'--')+(s.note?(' · '+esc(s.note)):'')+'</div></div><div class="r'+(s.note?' g':'')+'">'+(+s.dur>=((DB.sleepGoal||8)*60)?'达标':'')+'</div></div>').join(''):bEmpty('暂无睡眠记录'))+'</div>';}
 function bSleepM(){const ym=bcur.ym;
   let h=bNav(true)+bCal(ym,(ds,d,isT)=>{
     const s=DB.sleep.find(x=>x.date===ds&&x.dur);
@@ -1143,7 +1143,7 @@ function bSleepY(){const y=bcur.y;
   return h;}
 /* ================= 7 学习 ================= */
 function bStudyF(){const list=[...DB.study].filter(s=>s.dur).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
-  return bNav(true)+'<div class="blist">'+(list.length?list.map(s=>'<div class="lrow"><div class="m"><div class="t">'+esc(s.subject||s.type||'学习')+' · '+bHm(s.dur)+'</div><div class="s">'+(s.type?esc(s.type)+' · ':'')+(s.focus?esc(s.focus)+' · ':'')+bFmt(s.date)+(s.note?(' · '+esc(s.note)):'')+'</div></div></div>').join(''):bEmpty('暂无学习记录'))+'</div>';}
+  return bNav(true)+'<div class="blist">'+(list.length?list.map(s=>'<div class="lrow" data-del="'+s.id+'" data-del-db="study"><div class="m"><div class="t">'+esc(s.subject||s.type||'学习')+' · '+bHm(s.dur)+'</div><div class="s">'+(s.type?esc(s.type)+' · ':'')+(s.focus?esc(s.focus)+' · ':'')+bFmt(s.date)+(s.note?(' · '+esc(s.note)):'')+'</div></div></div>').join(''):bEmpty('暂无学习记录'))+'</div>';}
 function bStudyM(){const ym=bcur.ym;
   let h=bNav(true)+bCal(ym,(ds,d,isT)=>{
     const rec=DB.study.filter(x=>x.date===ds&&x.dur);const tot=rec.reduce((a,x)=>a+(+x.dur||0),0);
@@ -1157,7 +1157,7 @@ function bDrawStudy7(cv){const t=new Date();const lb=[...Array(7)].map((_,i)=>{c
 function bStudyDay(ds){const rec=DB.study.filter(s=>s.date===ds&&s.dur);if(!rec.length)return;bSheet(bFmt(ds)+' 学习',rec.flatMap(s=>[['科目',esc(s.subject||s.type||'学习')],['类型',s.type||'—'],['时长',bHm(s.dur)],['专注度',s.focus||'—']]));}
 /* ================= 8 心情 ================= */
 function bMoodF(){const list=[...DB.mood].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
-  return bNav(true)+'<div class="blist">'+(list.length?list.map(m=>'<div class="lrow"><div class="m"><div class="t">'+esc(m.text)+'</div><div class="s">'+bFmt(m.date)+(m.time?(' · '+m.time):'')+(m.note?(' · '+esc(m.note)):'')+'</div></div></div>').join(''):bEmpty('暂无心情记录'))+'</div>';}
+  return bNav(true)+'<div class="blist">'+(list.length?list.map(m=>'<div class="lrow" data-del="'+m.id+'" data-del-db="mood"><div class="m"><div class="t">'+esc(m.text)+'</div><div class="s">'+bFmt(m.date)+(m.time?(' · '+m.time):'')+(m.note?(' · '+esc(m.note)):'')+'</div></div></div>').join(''):bEmpty('暂无心情记录'))+'</div>';}
 function bMoodM(){const ym=bcur.ym;
   return bNav(true)+bCal(ym,(ds,d,isT)=>{
     const n=DB.mood.filter(m=>m.date===ds).length;
@@ -1176,7 +1176,7 @@ function bMoodY(){const y=bcur.y;
 function bMoodMonth(mi){const rec=window._bmy[mi-1];if(!rec||!rec.length)return;bSheet(mi+' 月心情记录',rec.flatMap(m=>[['心情',esc(m.text)],['日期',m.date+(m.time?' '+m.time:'')]]));}
 /* ================= 9 旅行 ================= */
 function bTravelF(){const list=[...DB.travel].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
-  return bNav(true)+'<div class="blist">'+(list.length?list.map(t=>'<div class="lrow"><div class="m"><div class="t">✈️ '+esc(t.place||'足迹')+'</div><div class="s">'+(t.prov?esc(t.prov)+' · ':'')+bFmt(t.date)+(t.note?(' · '+esc(t.note)):'')+'</div></div></div>').join(''):bEmpty('暂无旅行足迹'))+'</div>';}
+  return bNav(true)+'<div class="blist">'+(list.length?list.map(t=>'<div class="lrow" data-del="'+t.id+'" data-del-db="travel"><div class="m"><div class="t">✈️ '+esc(t.place||'足迹')+'</div><div class="s">'+(t.prov?esc(t.prov)+' · ':'')+bFmt(t.date)+(t.note?(' · '+esc(t.note)):'')+'</div></div></div>').join(''):bEmpty('暂无旅行足迹'))+'</div>';}
 function bTravelM(){const ym=bcur.ym;
   return bNav(true)+bCal(ym,(ds,d,isT)=>{
     const list=DB.travel.filter(t=>t.date===ds);
@@ -1305,7 +1305,7 @@ function renderBranch(){
   else if(bcur.view==='month')body=bMonth(k);
   else body=bYear(k);
   $('#view').innerHTML='<div class="subhdr"><button class="back" onclick="bcur=null;renderBranch()">‹</button><h2>'+BK[k][0]+' '+BK[k][1]+'</h2></div>'+bSeg()+body;
-  setTimeout(()=>{bDraw(k);},40);
+  setTimeout(()=>{bDraw(k);if(bcur.view==='flow')enhanceSwipe();},40);
 }
 
 function todoView(){const sts=['待处理','进行中','已完成'];
